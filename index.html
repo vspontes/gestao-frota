@@ -1,0 +1,1213 @@
+<!DOCTYPE html>
+
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>MGP Locadora</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Segoe UI',system-ui,sans-serif;background:#f3f4f6;min-height:100vh}
+.hidden{display:none!important}
+input,select,textarea{width:100%;padding:9px 12px;border:1.5px solid #e5e7eb;border-radius:10px;font-size:14px;font-family:inherit;background:#fff;transition:border .2s}
+input:focus,select:focus{outline:none;border-color:#2563eb}
+.field{margin-bottom:12px}
+label{display:block;font-size:13px;font-weight:600;color:#374151;margin-bottom:4px}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px}
+.btn{cursor:pointer;border:none;border-radius:10px;font-weight:600;display:inline-flex;align-items:center;gap:6px;font-family:inherit;font-size:14px;padding:9px 18px;transition:opacity .15s}
+.btn:hover{opacity:.85}
+.btn-primary{background:linear-gradient(135deg,#1e3a5f,#2563eb);color:#fff}
+.btn-danger{background:#ef4444;color:#fff}
+.btn-ghost{background:transparent;color:#2563eb;border:1.5px solid #2563eb}
+.btn-green{background:#10b981;color:#fff}
+.btn-yellow{background:#f59e0b;color:#fff}
+.btn-sm{padding:5px 12px;font-size:13px}
+.btn-block{width:100%;justify-content:center}
+.card{background:#fff;border-radius:12px;padding:16px;margin-bottom:12px;box-shadow:0 1px 4px rgba(0,0,0,.08)}
+.card.accent-green{border-left:4px solid #10b981}
+.card.accent-yellow{border-left:4px solid #f59e0b}
+.card.accent-red{border-left:4px solid #ef4444}
+.card.accent-blue{border-left:4px solid #2563eb}
+.card.accent-purple{border-left:4px solid #8b5cf6}
+.badge{border-radius:20px;padding:3px 10px;font-size:12px;font-weight:600}
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:200;display:flex;align-items:center;justify-content:center;padding:12px}
+.modal-box{background:#fff;border-radius:14px;padding:24px;width:100%;max-width:500px;max-height:90vh;overflow-y:auto}
+.modal-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:16px}
+.modal-header h3{font-size:17px;color:#1e3a5f;font-weight:700}
+.modal-close{background:none;border:none;font-size:24px;cursor:pointer;color:#6b7280}
+.modal-footer{display:flex;justify-content:flex-end;gap:8px;margin-top:12px}
+.page-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;flex-wrap:wrap;gap:8px}
+.page-header h2{color:#1e3a5f;font-size:20px;font-weight:700}
+.empty{color:#9ca3af;font-size:14px;padding:20px 0;text-align:center}
+.card-row{display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px}
+.row-actions{display:flex;gap:6px;align-items:flex-start;flex-shrink:0}
+.toast{position:fixed;bottom:20px;right:20px;background:#1e3a5f;color:#fff;padding:12px 20px;border-radius:10px;font-size:14px;z-index:999;opacity:0;transition:opacity .3s;max-width:300px}
+.toast.show{opacity:1}
+.stats-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(145px,1fr));gap:12px;margin-bottom:20px}
+.stat-card{background:#fff;border-radius:12px;padding:14px;display:flex;align-items:center;gap:12px;box-shadow:0 1px 4px rgba(0,0,0,.08)}
+.fleet-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:12px}
+.filter-bar{display:flex;gap:12px;margin-bottom:16px;flex-wrap:wrap;align-items:center}
+.total-badge{background:#eff6ff;border-radius:8px;padding:7px 16px;font-weight:700;color:#2563eb}
+.doc-item{margin-bottom:12px;border:1px solid #e5e7eb;border-radius:8px;padding:10px}
+.doc-item img{max-width:100%;border-radius:6px;margin-top:6px}
+.progress-bar{background:#e5e7eb;border-radius:10px;height:10px;overflow:hidden}
+.progress-fill{height:100%;border-radius:10px;transition:width .5s}
+.kpi-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:10px;margin-bottom:16px}
+.kpi{background:#fff;border-radius:12px;padding:12px;text-align:center;box-shadow:0 1px 4px rgba(0,0,0,.08)}
+.kpi .val{font-size:18px;font-weight:800;margin-bottom:2px}
+.kpi .lbl{font-size:11px;color:#6b7280}
+.alert-box{border-radius:10px;padding:12px 14px;margin-bottom:10px;font-size:13px;font-weight:600;display:flex;align-items:center;gap:8px}
+.alert-red{background:#fef2f2;color:#ef4444;border:1px solid #fecaca}
+.alert-yellow{background:#fffbeb;color:#f59e0b;border:1px solid #fde68a}
+.alert-green{background:#f0fdf4;color:#10b981;border:1px solid #bbf7d0}
+.alert-blue{background:#eff6ff;color:#2563eb;border:1px solid #bfdbfe}
+/* SIDEBAR */
+#sidebar{width:220px;background:#1e3a5f;flex-shrink:0;display:flex;flex-direction:column;min-height:100vh;position:fixed;top:0;left:0;z-index:50}
+#main{margin-left:220px;flex:1;padding:24px;min-height:100vh}
+.nav-btn{width:100%;background:transparent;color:#93c5fd;border:none;border-radius:8px;padding:10px 14px;cursor:pointer;display:flex;align-items:center;gap:10px;font-size:13px;font-weight:400;margin-bottom:2px;text-align:left;transition:background .15s}
+.nav-btn.active{background:#2563eb;color:#fff;font-weight:700}
+.sidebar-logo{padding:20px 16px 14px;border-bottom:1px solid #2d4f7c;text-align:center}
+.sidebar-footer{padding:10px 8px;border-top:1px solid #2d4f7c}
+#topbar{display:none;position:fixed;top:0;left:0;right:0;height:56px;background:#1e3a5f;z-index:50;align-items:center;padding:0 16px;gap:12px}
+#topbar-title{color:#fff;font-weight:700;font-size:15px;flex:1}
+#hamburger{display:flex;flex-direction:column;gap:5px;cursor:pointer;padding:6px}
+#hamburger span{width:22px;height:2px;background:#fff;border-radius:2px;display:block}
+#mobile-menu{position:fixed;top:56px;left:0;right:0;bottom:0;background:rgba(0,0,0,.5);z-index:49;display:none}
+#mobile-menu.open{display:block}
+#mobile-menu-inner{background:#1e3a5f;width:240px;height:100%;padding:12px 8px;overflow-y:auto}
+.mobile-nav-btn{width:100%;background:transparent;color:#93c5fd;border:none;border-radius:8px;padding:12px 14px;cursor:pointer;display:flex;align-items:center;gap:10px;font-size:14px;margin-bottom:4px;text-align:left}
+.mobile-nav-btn.active{background:#2563eb;color:#fff;font-weight:700}
+@media(max-width:768px){
+  #sidebar{display:none!important}
+  #topbar{display:flex!important}
+  #main{margin-left:0!important;margin-top:56px;padding:14px}
+}
+/* MOTORISTA APP */
+#motorista-app{min-height:100vh;background:#f3f4f6}
+.mot-header{background:linear-gradient(135deg,#1e3a5f,#2563eb);padding:20px 16px;color:#fff}
+.mot-card{background:#fff;border-radius:14px;padding:16px;margin-bottom:12px;box-shadow:0 2px 8px rgba(0,0,0,.08)}
+.mot-stat{background:linear-gradient(135deg,#1e3a5f,#2563eb);border-radius:14px;padding:16px;color:#fff;margin-bottom:12px}
+.tab-bar{display:flex;gap:6px;margin-bottom:16px;overflow-x:auto;padding-bottom:4px;-webkit-overflow-scrolling:touch}
+.tab-btn{flex-shrink:0;padding:8px 14px;border-radius:20px;border:none;cursor:pointer;font-size:13px;font-weight:600;background:#fff;color:#374151;box-shadow:0 1px 3px rgba(0,0,0,.1)}
+.tab-btn.active{background:#2563eb;color:#fff}
+</style>
+</head>
+<body>
+
+<!-- LOGIN -->
+
+<div id="login-screen">
+  <div style="min-height:100vh;background:linear-gradient(160deg,#0f2544,#1e3a5f 50%,#2563eb);display:flex;align-items:center;justify-content:center;padding:16px">
+    <div style="background:rgba(255,255,255,.97);border-radius:20px;padding:40px 32px;width:100%;max-width:360px;box-shadow:0 20px 60px rgba(0,0,0,.3)">
+      <div style="text-align:center;margin-bottom:28px">
+        <svg viewBox="0 0 400 300" width="150" height="112" xmlns="http://www.w3.org/2000/svg" style="display:block;margin:0 auto 12px">
+          <path d="M20,40 L20,160 L50,160 L50,90 L80,160 L110,90 L110,160 L140,160 L140,40 L110,40 L80,110 L50,40 Z" fill="#1e3a5f"/>
+          <path d="M160,100 C160,60 190,35 225,35 C255,35 278,52 285,72 L260,82 C255,68 243,58 225,58 C203,58 185,76 185,100 C185,124 203,142 225,142 C243,142 256,132 261,118 L235,118 L235,97 L285,97 L285,160 L265,160 L265,146 C255,156 242,162 225,162 C190,162 160,140 160,100 Z" fill="#1e3a5f"/>
+          <path d="M300,40 L300,160 L325,160 L325,115 L355,115 C378,115 395,99 395,77 C395,55 378,40 355,40 Z M325,62 L352,62 C363,62 370,68 370,77 C370,87 363,93 352,93 L325,93 Z" fill="#1e3a5f"/>
+          <text x="200" y="210" text-anchor="middle" font-family="Arial Black,sans-serif" font-size="26" font-weight="900" fill="#1e3a5f" letter-spacing="3">LOCADORA</text>
+          <text x="200" y="248" text-anchor="middle" font-family="Arial Black,sans-serif" font-size="26" font-weight="900" fill="#1e3a5f" letter-spacing="3">DE VEÍCULOS</text>
+        </svg>
+        <p style="color:#6b7280;font-size:13px">Sistema de Gestão de Frota</p>
+      </div>
+      <div class="field"><label>Usuário / Telefone</label><input id="login-user" placeholder="Digite seu usuário" onkeydown="if(event.key==='Enter')doLogin()"/></div>
+      <div class="field"><label>Senha</label><input id="login-pass" type="password" placeholder="Digite sua senha" onkeydown="if(event.key==='Enter')doLogin()"/></div>
+      <p id="login-err" style="color:#ef4444;font-size:13px;margin-bottom:10px;display:none">⚠️ Usuário ou senha incorretos.</p>
+      <button class="btn btn-primary btn-block" onclick="doLogin()" style="padding:13px;font-size:15px">Entrar</button>
+      <p style="text-align:center;margin-top:14px"><a href="#" onclick="mostrarEsqueceuSenha()" style="color:#2563eb;font-size:13px;text-decoration:none">Esqueceu a senha?</a></p>
+      <p style="color:#9ca3af;font-size:11px;text-align:center;margin-top:16px">© 2025 MGP Locadora de Veículos</p>
+    </div>
+  </div>
+</div>
+
+<!-- APP ADMIN -->
+
+<div id="app" class="hidden" style="display:flex;min-height:100vh">
+  <div id="sidebar">
+    <div class="sidebar-logo">
+      <svg viewBox="0 0 400 300" width="50" height="38" xmlns="http://www.w3.org/2000/svg">
+        <path d="M20,40 L20,160 L50,160 L50,90 L80,160 L110,90 L110,160 L140,160 L140,40 L110,40 L80,110 L50,40 Z" fill="#fff"/>
+        <path d="M160,100 C160,60 190,35 225,35 C255,35 278,52 285,72 L260,82 C255,68 243,58 225,58 C203,58 185,76 185,100 C185,124 203,142 225,142 C243,142 256,132 261,118 L235,118 L235,97 L285,97 L285,160 L265,160 L265,146 C255,156 242,162 225,162 C190,162 160,140 160,100 Z" fill="#fff"/>
+        <path d="M300,40 L300,160 L325,160 L325,115 L355,115 C378,115 395,99 395,77 C395,55 378,40 355,40 Z M325,62 L352,62 C363,62 370,68 370,77 C370,87 363,93 352,93 L325,93 Z" fill="#fff"/>
+      </svg>
+      <div style="color:#fff;font-weight:700;font-size:13px;margin-top:6px">MGP Locadora</div>
+      <div style="color:#93c5fd;font-size:10px" id="sidebar-user-name"></div>
+    </div>
+    <nav style="flex:1;padding:10px 8px" id="sidebar-nav"></nav>
+    <div class="sidebar-footer"><button class="nav-btn" onclick="doLogout()">🚪 Sair</button></div>
+  </div>
+  <div id="topbar">
+    <svg viewBox="0 0 400 300" width="36" height="27" xmlns="http://www.w3.org/2000/svg">
+      <path d="M20,40 L20,160 L50,160 L50,90 L80,160 L110,90 L110,160 L140,160 L140,40 L110,40 L80,110 L50,40 Z" fill="#fff"/>
+      <path d="M160,100 C160,60 190,35 225,35 C255,35 278,52 285,72 L260,82 C255,68 243,58 225,58 C203,58 185,76 185,100 C185,124 203,142 225,142 C243,142 256,132 261,118 L235,118 L235,97 L285,97 L285,160 L265,160 L265,146 C255,156 242,162 225,162 C190,162 160,140 160,100 Z" fill="#fff"/>
+      <path d="M300,40 L300,160 L325,160 L325,115 L355,115 C378,115 395,99 395,77 C395,55 378,40 355,40 Z M325,62 L352,62 C363,62 370,68 370,77 C370,87 363,93 352,93 L325,93 Z" fill="#fff"/>
+    </svg>
+    <div id="topbar-title">MGP Locadora</div>
+    <div id="hamburger" onclick="toggleMenu()"><span></span><span></span><span></span></div>
+  </div>
+  <div id="mobile-menu" onclick="toggleMenu()">
+    <div id="mobile-menu-inner" onclick="event.stopPropagation()">
+      <div id="mobile-nav"></div>
+      <button class="mobile-nav-btn" onclick="doLogout()">🚪 Sair</button>
+    </div>
+  </div>
+  <div id="main">
+    <div id="page-dashboard"></div>
+    <div id="page-veiculos" class="hidden"></div>
+    <div id="page-motoristas" class="hidden"></div>
+    <div id="page-pagamentos" class="hidden"></div>
+    <div id="page-manutencoes" class="hidden"></div>
+    <div id="page-multas" class="hidden"></div>
+    <div id="page-frota" class="hidden"></div>
+    <div id="page-usuarios" class="hidden"></div>
+    <div id="page-minhaconta" class="hidden"></div>
+  </div>
+</div>
+
+<!-- APP MOTORISTA -->
+
+<div id="motorista-app" class="hidden">
+  <div class="mot-header">
+    <div style="display:flex;justify-content:space-between;align-items:center">
+      <svg viewBox="0 0 400 300" width="55" height="41" xmlns="http://www.w3.org/2000/svg">
+        <path d="M20,40 L20,160 L50,160 L50,90 L80,160 L110,90 L110,160 L140,160 L140,40 L110,40 L80,110 L50,40 Z" fill="#fff"/>
+        <path d="M160,100 C160,60 190,35 225,35 C255,35 278,52 285,72 L260,82 C255,68 243,58 225,58 C203,58 185,76 185,100 C185,124 203,142 225,142 C243,142 256,132 261,118 L235,118 L235,97 L285,97 L285,160 L265,160 L265,146 C255,156 242,162 225,162 C190,162 160,140 160,100 Z" fill="#fff"/>
+        <path d="M300,40 L300,160 L325,160 L325,115 L355,115 C378,115 395,99 395,77 C395,55 378,40 355,40 Z M325,62 L352,62 C363,62 370,68 370,77 C370,87 363,93 352,93 L325,93 Z" fill="#fff"/>
+      </svg>
+      <button onclick="doLogout()" style="background:rgba(255,255,255,.2);border:none;color:#fff;border-radius:8px;padding:8px 14px;cursor:pointer;font-size:13px">🚪 Sair</button>
+    </div>
+    <div style="margin-top:10px">
+      <div style="font-size:19px;font-weight:700" id="mot-nome"></div>
+      <div style="font-size:13px;opacity:.8" id="mot-carro"></div>
+    </div>
+  </div>
+  <div style="padding:14px" id="mot-content"></div>
+</div>
+
+<div id="toast" class="toast"></div>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-app.js";
+import { getFirestore, collection, addDoc, getDocs, deleteDoc, doc, updateDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-firestore.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyCiyTqzSeCPG_SPaSqe7RFDbuYGO15RAj8",
+  authDomain: "frota-carros-67e9e.firebaseapp.com",
+  projectId: "frota-carros-67e9e",
+  storageBucket: "frota-carros-67e9e.firebasestorage.app",
+  messagingSenderId: "708276056895",
+  appId: "1:708276056895:web:890c4f40df6b8d961d198a"
+};
+
+const fb = initializeApp(firebaseConfig);
+const db = getFirestore(fb);
+
+let state = {carros:[],motoristas:[],pagamentos:[],manutencoes:[],multas:[],usuarios:[],jornadas:[],abastecimentos:[]};
+let currentPage='dashboard', currentUser=null, motAba='hoje', jornadaTimer=null;
+
+const fmt = d=>d?new Date(d+'T12:00:00').toLocaleDateString('pt-BR'):'—';
+const fmtR = v=>'R$ '+Number(v||0).toFixed(2).replace('.',',');
+const todayStr = ()=>new Date().toISOString().split('T')[0];
+const $ = id=>document.getElementById(id);
+const toast = msg=>{const t=$('toast');t.textContent=msg;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),3000);};
+const fileToBase64 = f=>new Promise(r=>{const fr=new FileReader();fr.onload=e=>r({name:f.name,type:f.type,data:e.target.result});fr.readAsDataURL(f);});
+const fbAdd = async(col,data)=>{const r=await addDoc(collection(db,col),{...data,criadoEm:new Date().toISOString()});return r.id;};
+const fbDel = async(col,id)=>deleteDoc(doc(db,col,id));
+const fbUpd = async(col,id,data)=>updateDoc(doc(db,col,id),data);
+const fbListen = (col,cb)=>onSnapshot(collection(db,col),snap=>{const d=[];snap.forEach(x=>d.push({id:x.id,...x.data()}));cb(d);});
+
+async function inicializarUsuarios(){
+  const snap=await getDocs(collection(db,'usuarios'));
+  if(snap.empty) await fbAdd('usuarios',{nome:'Administrador',login:'admin',telefone:'',senha:'mgp123',perfil:'admin',ativo:true});
+}
+
+// ── AUTH ──────────────────────────────────────────────────────────────────
+window.doLogin = async()=>{
+  const u=$('login-user').value.trim().toLowerCase(), s=$('login-pass').value;
+  if(!u||!s){$('login-err').style.display='block';$('login-err').textContent='⚠️ Preencha todos os campos.';return;}
+  const snap=await getDocs(collection(db,'usuarios'));
+  let found=null;
+  snap.forEach(d=>{const x={id:d.id,...d.data()};if((x.login?.toLowerCase()===u||x.telefone===u)&&x.senha===s&&x.ativo!==false)found=x;});
+  if(!found){$('login-err').style.display='block';$('login-err').textContent='⚠️ Usuário ou senha incorretos.';return;}
+  currentUser=found;$('login-err').style.display='none';
+  $('login-screen').classList.add('hidden');
+  if(found.perfil==='motorista') iniciarMotorista(found);
+  else iniciarAdmin(found);
+};
+
+window.doLogout=()=>{
+  currentUser=null;if(jornadaTimer)clearInterval(jornadaTimer);
+  ['app','motorista-app'].forEach(id=>$(id).classList.add('hidden'));
+  $('login-screen').classList.remove('hidden');
+  $('login-user').value='';$('login-pass').value='';
+};
+
+window.mostrarEsqueceuSenha=()=>{
+  openModal('Esqueceu a senha?',`<p style="font-size:14px;color:#6b7280;margin-bottom:16px">Sua senha será redefinida para <b>mgp123</b>.</p><div class="field"><label>Usuário ou Telefone</label><input id="f-ru"/></div>`,async()=>{
+    const u=$('f-ru').value.trim().toLowerCase();
+    const snap=await getDocs(collection(db,'usuarios'));let found=null;
+    snap.forEach(d=>{const x={id:d.id,...d.data()};if(x.login?.toLowerCase()===u||x.telefone===u)found=x;});
+    if(!found)return alert('Usuário não encontrado.');
+    await fbUpd('usuarios',found.id,{senha:'mgp123'});closeModal();toast('Senha redefinida para mgp123! ✅');
+  });
+};
+
+// ── ADMIN ─────────────────────────────────────────────────────────────────
+function iniciarAdmin(user){
+  $('app').classList.remove('hidden');
+  $('sidebar-user-name').textContent=user.perfil==='admin'?'👑 Admin':'⚙️ Funcionário';
+  buildMenu(user.perfil); initListeners(); goTo('dashboard');
+}
+
+function buildMenu(perfil){
+  const pages=[
+    {id:'dashboard',e:'📊',l:'Dashboard'},{id:'veiculos',e:'🚗',l:'Veículos'},
+    {id:'motoristas',e:'👤',l:'Motoristas'},{id:'pagamentos',e:'💰',l:'Pagamentos'},
+    {id:'manutencoes',e:'🔧',l:'Manutenções'},{id:'multas',e:'🚨',l:'Multas'},
+    {id:'frota',e:'📈',l:'Inteligência'},
+    ...(perfil==='admin'?[{id:'usuarios',e:'👥',l:'Usuários'}]:[]),
+    {id:'minhaconta',e:'🔑',l:'Minha Conta'},
+  ];
+  const nav=$('sidebar-nav'),mn=$('mobile-nav');nav.innerHTML='';mn.innerHTML='';
+  pages.forEach(p=>{
+    nav.innerHTML+=`<button class="nav-btn" onclick="goTo('${p.id}')" id="nav-${p.id}">${p.e} ${p.l}</button>`;
+    mn.innerHTML+=`<button class="mobile-nav-btn" id="mnav-${p.id}" onclick="goTo('${p.id}');toggleMenu()">${p.e} ${p.l}</button>`;
+  });
+}
+
+function initListeners(){
+  ['carros','motoristas','pagamentos','manutencoes','multas','usuarios','jornadas','abastecimentos'].forEach(col=>{
+    fbListen(col,d=>{state[col]=d;renderPage();});
+  });
+}
+
+window.toggleMenu=()=>$('mobile-menu').classList.toggle('open');
+window.goTo=page=>{
+  currentPage=page;
+  document.querySelectorAll('.nav-btn,.mobile-nav-btn').forEach(b=>b.classList.remove('active'));
+  $('nav-'+page)?.classList.add('active');$('mnav-'+page)?.classList.add('active');
+  ['dashboard','veiculos','motoristas','pagamentos','manutencoes','multas','frota','usuarios','minhaconta'].forEach(p=>{
+    $('page-'+p)?.classList.toggle('hidden',p!==page);
+  });
+  renderPage();
+};
+
+function renderPage(){
+  if(!currentUser||currentUser.perfil==='motorista')return;
+  const pages={dashboard:renderDashboard,veiculos:renderVeiculos,motoristas:renderMotoristas,
+    pagamentos:renderPagamentos,manutencoes:renderManutencoes,multas:renderMultas,
+    frota:renderFrota,usuarios:renderUsuarios,minhaconta:renderMinhaConta};
+  pages[currentPage]?.();
+}
+
+// ── MODAL ─────────────────────────────────────────────────────────────────
+window.openModal=(title,body,onSave)=>{
+  $('modal-overlay')?.remove();
+  const d=document.createElement('div');d.id='modal-overlay';d.className='modal-overlay';
+  d.innerHTML=`<div class="modal-box"><div class="modal-header"><h3>${title}</h3><button class="modal-close" onclick="closeModal()">×</button></div><div id="modal-body">${body}</div><div class="modal-footer"><button class="btn btn-ghost" onclick="closeModal()">Cancelar</button><button class="btn btn-primary" id="msb">Salvar</button></div></div>`;
+  document.body.appendChild(d);$('msb').onclick=onSave;
+};
+window.closeModal=()=>$('modal-overlay')?.remove();
+window.verDocs=docsJSON=>{
+  const docs=JSON.parse(docsJSON);
+  const d=document.createElement('div');d.id='modal-overlay';d.className='modal-overlay';
+  d.innerHTML=`<div class="modal-box"><div class="modal-header"><h3>Documentos</h3><button class="modal-close" onclick="closeModal()">×</button></div>${docs.length===0?'<p class="empty">Sem documentos.</p>':docs.map(x=>`<div class="doc-item"><b style="font-size:13px">${x.name}</b>${x.type.startsWith('image/')?`<img src="${x.data}"/>`:`<br><a href="${x.data}" download="${x.name}" style="color:#2563eb;font-size:13px">⬇ Baixar</a>`}</div>`).join('')}</div>`;
+  document.body.appendChild(d);
+};
+
+// ══════════════════════════════════════════════════════════════════════════
+// ADMIN PAGES
+// ══════════════════════════════════════════════════════════════════════════
+function renderDashboard(){
+  const {carros,motoristas,pagamentos,manutencoes,multas,jornadas}=state;
+  const totalRec=pagamentos.reduce((a,p)=>a+Number(p.valor||0),0);
+  const semMot=carros.filter(c=>!c.motorista_id).length;
+  const multPend=multas.filter(m=>!m.pago).length;
+  const manPend=manutencoes.filter(m=>!m.ok).length;
+  const stats=[
+    {l:'Veículos',v:carros.length,e:'🚗',c:'#2563eb'},{l:'Com Motorista',v:carros.length-semMot,e:'✅',c:'#10b981'},
+    {l:'Sem Motorista',v:semMot,e:'⚠️',c:'#f59e0b'},{l:'Total Recebido',v:fmtR(totalRec),e:'💰',c:'#8b5cf6'},
+    {l:'Manutenções Pend.',v:manPend,e:'🔧',c:'#06b6d4'},{l:'Multas Pendentes',v:multPend,e:'🚨',c:'#ef4444'},
+  ];
+  $('page-dashboard').innerHTML=`
+    <h2 style="color:#1e3a5f;margin-bottom:16px">Dashboard</h2>
+    <div class="stats-grid">${stats.map(s=>`<div class="stat-card"><span style="font-size:26px">${s.e}</span><div><div style="font-size:19px;font-weight:700;color:${s.c}">${s.v}</div><div style="font-size:11px;color:#6b7280">${s.l}</div></div></div>`).join('')}</div>
+    <h3 style="color:#1e3a5f;margin-bottom:12px">Frota</h3>
+    ${carros.length===0?'<p class="empty">Nenhum veículo cadastrado.</p>':''}
+    <div class="fleet-grid">${carros.map(c=>{
+      const mot=motoristas.find(m=>m.id===c.motorista_id);
+      const total=pagamentos.filter(p=>p.carro_id===c.id).reduce((a,p)=>a+Number(p.valor||0),0);
+      return `<div class="card ${mot?'accent-green':'accent-yellow'}">
+        <div style="font-weight:700">${c.modelo}</div><div style="font-size:13px;color:#6b7280">${c.placa}</div>
+        <div style="font-size:13px;margin-top:6px">👤 ${mot?mot.nome:'Sem motorista'}</div>
+        <div style="font-size:13px">💰 ${fmtR(total)} recebidos</div>
+      </div>`;
+    }).join('')}</div>`;
+}
+
+function renderVeiculos(){
+  const {carros,motoristas}=state;
+  $('page-veiculos').innerHTML=`
+    <div class="page-header"><h2>Veículos</h2><button class="btn btn-primary" onclick="abrirModalCarro()">+ Novo Veículo</button></div>
+    ${carros.length===0?'<p class="empty">Nenhum veículo.</p>':''}
+    ${carros.map(c=>{
+      const mot=motoristas.find(m=>m.id===c.motorista_id);
+      return `<div class="card ${mot?'accent-green':'accent-yellow'}">
+        <div class="card-row">
+          <div style="flex:1">
+            <div style="font-weight:700;font-size:15px">${c.modelo} <span style="color:#6b7280;font-weight:400">— ${c.placa}</span></div>
+            <div style="font-size:13px;color:#6b7280">Ano:${c.ano||'—'} | Cor:${c.cor||'—'} | Chassi:${c.chassi||'—'} | RENAVAM:${c.renavam||'—'}</div>
+            <div style="margin-top:8px;display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+              <span style="font-size:13px;font-weight:600">Motorista:</span>
+              <select style="font-size:13px;padding:4px 8px;border:1px solid #d1d5db;border-radius:6px;width:auto" onchange="vincularMotorista('${c.id}',this.value)">
+                <option value="">— Sem motorista —</option>
+                ${motoristas.map(m=>`<option value="${m.id}"${c.motorista_id===m.id?' selected':''}>${m.nome}</option>`).join('')}
+              </select>
+            </div>
+            ${c.obs?`<div style="font-size:12px;color:#6b7280;margin-top:4px">📝 ${c.obs}</div>`:''}
+          </div>
+          <div class="row-actions">
+            ${c.docs?.length>0?`<button class="btn btn-ghost btn-sm" onclick='verDocs(${JSON.stringify(JSON.stringify(c.docs))})'>📄 ${c.docs.length}</button>`:''}
+            <button class="btn btn-danger btn-sm" onclick="delCarro('${c.id}')">✕</button>
+          </div>
+        </div>
+      </div>`;
+    }).join('')}`;
+}
+window.abrirModalCarro=()=>{
+  openModal('Novo Veículo',`
+    <div class="field"><label>Modelo *</label><input id="f-modelo" placeholder="Ex: Hyundai HB20"/></div>
+    <div class="field"><label>Placa *</label><input id="f-placa" oninput="this.value=this.value.toUpperCase()" placeholder="ABC1D23"/></div>
+    <div class="grid2"><div class="field"><label>Ano</label><input id="f-ano"/></div><div class="field"><label>Cor</label><input id="f-cor"/></div></div>
+    <div class="grid2"><div class="field"><label>Chassi</label><input id="f-chassi"/></div><div class="field"><label>RENAVAM</label><input id="f-renavam"/></div></div>
+    <div class="field"><label>Valor de Compra (R$)</label><input type="number" id="f-compra" step="0.01" placeholder="50000"/></div>
+    <div class="grid2"><div class="field"><label>Valor Revenda Est. (R$)</label><input type="number" id="f-revenda" step="0.01" placeholder="35000"/></div><div class="field"><label>Vida Útil (KM)</label><input type="number" id="f-vidautil" placeholder="200000"/></div></div>
+    <div class="field"><label>Motorista</label><select id="f-mot"><option value="">— Nenhum —</option>${state.motoristas.map(m=>`<option value="${m.id}">${m.nome}</option>`).join('')}</select></div>
+    <div class="field"><label>Documentos</label><input type="file" id="f-docs" accept="image/*,application/pdf" multiple/><div id="f-docs-c" style="font-size:12px;color:#6b7280;margin-top:4px"></div></div>
+    <div class="field"><label>Observações</label><input id="f-obs"/></div>
+  `,async()=>{
+    const modelo=$('f-modelo').value.trim(),placa=$('f-placa').value.trim();
+    if(!modelo||!placa)return alert('Modelo e placa obrigatórios.');
+    const docs=await Promise.all(Array.from($('f-docs').files).map(fileToBase64));
+    await fbAdd('carros',{modelo,placa,ano:$('f-ano').value,cor:$('f-cor').value,chassi:$('f-chassi').value,renavam:$('f-renavam').value,valor_compra:Number($('f-compra').value||0),valor_revenda:Number($('f-revenda').value||0),vida_util_km:Number($('f-vidautil').value||200000),motorista_id:$('f-mot').value,obs:$('f-obs').value,docs});
+    closeModal();toast('Veículo adicionado! ✅');
+  });
+  setTimeout(()=>{$('f-docs')?.addEventListener('change',()=>{$('f-docs-c').textContent=$('f-docs').files.length+' arquivo(s)';});},100);
+};
+window.vincularMotorista=async(cId,mId)=>{await fbUpd('carros',cId,{motorista_id:mId});toast('Vínculo atualizado!');};
+window.delCarro=async id=>{if(confirm('Remover veículo?')){await fbDel('carros',id);toast('Removido.');}};
+
+function renderMotoristas(){
+  const {motoristas,carros}=state;
+  $('page-motoristas').innerHTML=`
+    <div class="page-header"><h2>Motoristas</h2><button class="btn btn-primary" onclick="abrirModalMotorista()">+ Novo Motorista</button></div>
+    ${motoristas.length===0?'<p class="empty">Nenhum motorista.</p>':''}
+    ${motoristas.map(m=>{
+      const carro=carros.find(c=>c.motorista_id===m.id);
+      const pts=Number(m.cnh_pontos||0);
+      const pc=pts>=35?'#ef4444':pts>=20?'#f59e0b':'#10b981';
+      return `<div class="card">
+        <div class="card-row">
+          <div style="flex:1">
+            <div style="font-weight:700;font-size:15px">${m.nome}</div>
+            <div style="font-size:13px;color:#6b7280">CPF:${m.cpf||'—'} | Tel:${m.telefone||'—'}</div>
+            <div style="font-size:13px;color:#6b7280">CNH:${m.cnh||'—'} | Val:${fmt(m.cnh_validade)}</div>
+            <div style="margin-top:6px;display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+              <span style="font-size:13px;font-weight:600;color:${pc}">● ${pts} pts CNH</span>
+              ${carro?`<span class="badge" style="background:#2563eb22;color:#2563eb">🚗 ${carro.placa}</span>`:`<span class="badge" style="background:#9ca3af22;color:#9ca3af">Sem veículo</span>`}
+            </div>
+          </div>
+          <div class="row-actions">
+            ${m.docs?.length>0?`<button class="btn btn-ghost btn-sm" onclick='verDocs(${JSON.stringify(JSON.stringify(m.docs))})'>📄 ${m.docs.length}</button>`:''}
+            <button class="btn btn-danger btn-sm" onclick="delMotorista('${m.id}')">✕</button>
+          </div>
+        </div>
+      </div>`;
+    }).join('')}`;
+}
+window.abrirModalMotorista=()=>{
+  openModal('Novo Motorista',`
+    <div class="field"><label>Nome *</label><input id="f-nome"/></div>
+    <div class="grid2"><div class="field"><label>CPF</label><input id="f-cpf" placeholder="000.000.000-00"/></div><div class="field"><label>Telefone *</label><input id="f-tel" placeholder="(00)00000-0000"/></div></div>
+    <div class="grid2"><div class="field"><label>CNH</label><input id="f-cnh"/></div><div class="field"><label>Validade CNH</label><input type="date" id="f-cval"/></div></div>
+    <div class="field"><label>Pontos CNH</label><input type="number" id="f-pts" value="0" min="0" max="40"/></div>
+    <div class="field"><label>Endereço</label><input id="f-end"/></div>
+    <div class="field"><label>Documentos</label><input type="file" id="f-docs" accept="image/*,application/pdf" multiple/><div id="f-docs-c" style="font-size:12px;color:#6b7280;margin-top:4px"></div></div>
+    <div class="field"><label>Observações</label><input id="f-obs"/></div>
+    <div style="background:#eff6ff;border-radius:8px;padding:10px;font-size:13px;color:#2563eb">📱 Acesso criado automaticamente com telefone e senha <b>mgp123</b></div>
+  `,async()=>{
+    const nome=$('f-nome').value.trim(),tel=$('f-tel').value.trim();
+    if(!nome||!tel)return alert('Nome e telefone obrigatórios.');
+    const docs=await Promise.all(Array.from($('f-docs').files).map(fileToBase64));
+    const motId=await fbAdd('motoristas',{nome,cpf:$('f-cpf').value,telefone:tel,cnh:$('f-cnh').value,cnh_validade:$('f-cval').value,cnh_pontos:$('f-pts').value||'0',endereco:$('f-end').value,obs:$('f-obs').value,docs,config:{aluguel_semanal:0,meta_semanal:0,meta_diaria:0,meta_mensal:0}});
+    await fbAdd('usuarios',{nome,login:tel,telefone:tel,senha:'mgp123',perfil:'motorista',motorista_id:motId,ativo:true});
+    closeModal();toast('Motorista cadastrado! Acesso: '+tel+' / mgp123 ✅');
+  });
+  setTimeout(()=>{$('f-docs')?.addEventListener('change',()=>{$('f-docs-c').textContent=$('f-docs').files.length+' arquivo(s)';});},100);
+};
+window.delMotorista=async id=>{if(confirm('Remover motorista?')){await fbDel('motoristas',id);toast('Removido.');}};
+
+function renderPagamentos(){
+  const {pagamentos,carros}=state;
+  const filtro=window._filtPag||'';
+  const lista=filtro?pagamentos.filter(p=>p.carro_id===filtro):pagamentos;
+  const total=lista.reduce((a,p)=>a+Number(p.valor||0),0);
+  $('page-pagamentos').innerHTML=`
+    <div class="page-header"><h2>Pagamentos</h2><button class="btn btn-primary" onclick="abrirModalPag()">+ Registrar</button></div>
+    <div class="filter-bar">
+      <select onchange="window._filtPag=this.value;renderPage()" style="padding:7px 12px;border:1px solid #d1d5db;border-radius:8px;font-size:14px;width:auto">
+        <option value="">Todos os veículos</option>
+        ${carros.map(c=>`<option value="${c.id}"${filtro===c.id?' selected':''}>${c.modelo} — ${c.placa}</option>`).join('')}
+      </select>
+      <div class="total-badge">Total: ${fmtR(total)}</div>
+    </div>
+    ${lista.length===0?'<p class="empty">Nenhum pagamento.</p>':''}
+    ${lista.map(p=>`<div class="card"><div class="card-row">
+      <div><span style="font-weight:700;font-size:16px;color:#10b981">${fmtR(p.valor)}</span><span style="color:#6b7280;font-size:13px;margin-left:10px">${fmt(p.data)}</span>
+      <div style="font-size:13px;margin-top:2px">${p.placa||'—'} · ${p.motorista||'—'} · ${p.forma||'—'}</div>
+      ${p.descricao?`<div style="font-size:12px;color:#6b7280">${p.descricao}</div>`:''}</div>
+      <button class="btn btn-danger btn-sm" onclick="delPag('${p.id}')">✕</button>
+    </div></div>`).join('')}`;
+}
+window.abrirModalPag=()=>{
+  openModal('Registrar Pagamento',`
+    <div class="field"><label>Veículo *</label><select id="f-c"><option value="">Selecione...</option>${state.carros.map(c=>`<option value="${c.id}">${c.modelo} — ${c.placa}</option>`).join('')}</select></div>
+    <div class="grid2"><div class="field"><label>Valor *</label><input type="number" id="f-v" step="0.01"/></div><div class="field"><label>Data</label><input type="date" id="f-d" value="${todayStr()}"/></div></div>
+    <div class="field"><label>Forma</label><select id="f-f"><option>Pix</option><option>Dinheiro</option><option>Transferência</option><option>Outro</option></select></div>
+    <div class="field"><label>Descrição</label><input id="f-desc" placeholder="Ex: Pagamento parcial semana 1"/></div>
+  `,async()=>{
+    const cid=$('f-c').value,val=$('f-v').value;if(!cid||!val)return alert('Preencha os campos obrigatórios.');
+    const c=state.carros.find(x=>x.id===cid),m=state.motoristas.find(x=>x.id===c?.motorista_id);
+    await fbAdd('pagamentos',{carro_id:cid,valor:Number(val),data:$('f-d').value,forma:$('f-f').value,descricao:$('f-desc').value,placa:c?.placa||'',motorista:m?.nome||'—',motorista_id:c?.motorista_id||''});
+    closeModal();toast('Pagamento registrado! ✅');
+  });
+};
+window.delPag=async id=>{if(confirm('Remover?')){await fbDel('pagamentos',id);toast('Removido.');}};
+
+function renderManutencoes(){
+  const {manutencoes}=state;
+  $('page-manutencoes').innerHTML=`
+    <div class="page-header"><h2>Manutenções</h2><button class="btn btn-primary" onclick="abrirModalMan()">+ Nova</button></div>
+    ${manutencoes.length===0?'<p class="empty">Nenhuma manutenção.</p>':''}
+    ${manutencoes.map(m=>`<div class="card ${m.ok?'accent-green':'accent-yellow'}">
+      <div class="card-row"><div style="flex:1">
+        <div style="font-weight:700">${m.tipo} <span class="badge" style="background:${m.ok?'#10b98122':'#f59e0b22'};color:${m.ok?'#10b981':'#f59e0b'}">${m.ok?'Concluído':'Pendente'}</span></div>
+        <div style="font-size:13px;color:#6b7280">${m.modelo||''} — ${m.placa||''} | ${fmt(m.data)}</div>
+        <div style="font-size:13px">${m.km?'KM:'+m.km+' ':''} ${m.custo?'| Custo:'+fmtR(m.custo)+' ':''} ${m.proxima_km?'| Próx:'+m.proxima_km+'km':''}</div>
+        ${m.obs?`<div style="font-size:12px;color:#6b7280">${m.obs}</div>`:''}
+      </div>
+      <div class="row-actions">
+        <button class="btn btn-ghost btn-sm" onclick="toggleMan('${m.id}',${!m.ok})">${m.ok?'Reabrir':'✓'}</button>
+        <button class="btn btn-danger btn-sm" onclick="delMan('${m.id}')">✕</button>
+      </div></div>
+    </div>`).join('')}`;
+}
+window.abrirModalMan=()=>{
+  const tipos=['Troca de óleo','Revisão geral','Pneus','Freios','Suspensão','Elétrica','Funilaria','Ar-condicionado','Outro'];
+  openModal('Nova Manutenção',`
+    <div class="field"><label>Veículo *</label><select id="f-c"><option value="">Selecione...</option>${state.carros.map(c=>`<option value="${c.id}">${c.modelo} — ${c.placa}</option>`).join('')}</select></div>
+    <div class="field"><label>Tipo</label><select id="f-t">${tipos.map(t=>`<option>${t}</option>`).join('')}</select></div>
+    <div class="grid2"><div class="field"><label>Data</label><input type="date" id="f-d" value="${todayStr()}"/></div><div class="field"><label>KM</label><input type="number" id="f-km"/></div></div>
+    <div class="grid2"><div class="field"><label>Custo (R$)</label><input type="number" step="0.01" id="f-cu"/></div><div class="field"><label>Próxima (KM)</label><input type="number" id="f-pk"/></div></div>
+    <div class="field"><label>Observações</label><input id="f-obs"/></div>
+  `,async()=>{
+    const cid=$('f-c').value;if(!cid)return alert('Selecione o veículo.');
+    const c=state.carros.find(x=>x.id===cid);
+    await fbAdd('manutencoes',{carro_id:cid,tipo:$('f-t').value,data:$('f-d').value,km:$('f-km').value,custo:$('f-cu').value,proxima_km:$('f-pk').value,obs:$('f-obs').value,ok:false,placa:c?.placa||'',modelo:c?.modelo||''});
+    closeModal();toast('Manutenção registrada! ✅');
+  });
+};
+window.toggleMan=async(id,val)=>{await fbUpd('manutencoes',id,{ok:val});toast(val?'Concluída! ✅':'Reaberta.');};
+window.delMan=async id=>{if(confirm('Remover?')){await fbDel('manutencoes',id);toast('Removido.');}};
+
+function renderMultas(){
+  const {multas}=state;
+  $('page-multas').innerHTML=`
+    <div class="page-header"><h2>Multas</h2><button class="btn btn-primary" onclick="abrirModalMulta()">+ Registrar</button></div>
+    ${multas.length===0?'<p class="empty">Nenhuma multa.</p>':''}
+    ${multas.map(m=>`<div class="card ${m.pago?'accent-green':'accent-red'}">
+      <div class="card-row"><div style="flex:1">
+        <div style="font-weight:700">${m.descricao} <span class="badge" style="background:${m.pago?'#10b98122':'#ef444422'};color:${m.pago?'#10b981':'#ef4444'}">${m.pago?'Paga':'Pendente'}</span></div>
+        <div style="font-size:13px;color:#6b7280">${m.placa||'—'} | ${fmt(m.data)} ${m.vencimento?'| Vence:'+fmt(m.vencimento):''}</div>
+        <div style="font-size:13px">${m.valor?fmtR(m.valor)+' ':''} ${m.pontos?`<span style="color:#ef4444;font-weight:600">| ${m.pontos} pts </span>`:''}<span style="color:#6b7280">| ${m.resp==='motorista'?'Motorista paga':'Proprietário paga'}</span></div>
+      </div>
+      <div class="row-actions">
+        <button class="btn btn-ghost btn-sm" onclick="toggleMulta('${m.id}',${!m.pago})">${m.pago?'Reabrir':'✓ Paga'}</button>
+        <button class="btn btn-danger btn-sm" onclick="delMulta('${m.id}')">✕</button>
+      </div></div>
+    </div>`).join('')}`;
+}
+window.abrirModalMulta=()=>{
+  openModal('Registrar Multa',`
+    <div class="field"><label>Veículo *</label><select id="f-c"><option value="">Selecione...</option>${state.carros.map(c=>`<option value="${c.id}">${c.modelo} — ${c.placa}</option>`).join('')}</select></div>
+    <div class="field"><label>Motorista</label><select id="f-m"><option value="">— Nenhum —</option>${state.motoristas.map(m=>`<option value="${m.id}">${m.nome}</option>`).join('')}</select></div>
+    <div class="field"><label>Infração *</label><input id="f-desc" placeholder="Ex: Excesso de velocidade"/></div>
+    <div class="grid2"><div class="field"><label>Data</label><input type="date" id="f-d" value="${todayStr()}"/></div><div class="field"><label>Vencimento</label><input type="date" id="f-vc"/></div></div>
+    <div class="grid2"><div class="field"><label>Valor (R$)</label><input type="number" step="0.01" id="f-v"/></div><div class="field"><label>Pontos CNH</label><input type="number" min="0" max="7" id="f-p"/></div></div>
+    <div class="field"><label>Quem paga?</label><select id="f-r"><option value="motorista">Motorista</option><option value="proprietario">Proprietário</option></select></div>
+  `,async()=>{
+    const cid=$('f-c').value,desc=$('f-desc').value.trim();if(!cid||!desc)return alert('Preencha os campos obrigatórios.');
+    const c=state.carros.find(x=>x.id===cid),m=state.motoristas.find(x=>x.id===$('f-m').value);
+    await fbAdd('multas',{carro_id:cid,motorista_id:$('f-m').value,descricao:desc,data:$('f-d').value,vencimento:$('f-vc').value,valor:$('f-v').value,pontos:$('f-p').value,resp:$('f-r').value,pago:false,placa:c?.placa||'',motorista:m?.nome||'—'});
+    closeModal();toast('Multa registrada! ✅');
+  });
+};
+window.toggleMulta=async(id,val)=>{await fbUpd('multas',id,{pago:val});toast(val?'Paga! ✅':'Reaberta.');};
+window.delMulta=async id=>{if(confirm('Remover?')){await fbDel('multas',id);toast('Removido.');}};
+
+// ══════════════════════════════════════════════════════════════════════════
+// INTELIGÊNCIA DE FROTA (ADMIN)
+// ══════════════════════════════════════════════════════════════════════════
+function renderFrota(){
+  const {carros,motoristas,pagamentos,jornadas,multas}=state;
+  const subAbas=[{id:'roi',l:'🚗 ROI Veículos'},{id:'score',l:'🏆 Score Motoristas'},{id:'dre',l:'📊 DRE'}];
+  const sub=window._frotaSub||'roi';
+
+  let content='';
+  if(sub==='roi') content=renderROI(carros,pagamentos,jornadas);
+  else if(sub==='score') content=renderScore(motoristas,jornadas,multas,carros);
+  else if(sub==='dre') content=renderDRE(carros,motoristas,pagamentos,jornadas);
+
+  $('page-frota').innerHTML=`
+    <div class="page-header"><h2>📈 Inteligência de Frota</h2></div>
+    <div class="tab-bar">${subAbas.map(a=>`<button class="tab-btn ${sub===a.id?'active':''}" onclick="window._frotaSub='${a.id}';renderPage()">${a.l}</button>`).join('')}</div>
+    ${content}`;
+}
+
+function renderROI(carros,pagamentos,jornadas){
+  if(carros.length===0) return '<p class="empty">Nenhum veículo cadastrado.</p>';
+  return carros.map(c=>{
+    const compra=Number(c.valor_compra||0),revenda=Number(c.valor_revenda||0),vidaUtil=Number(c.vida_util_km||200000);
+    const recMensal=pagamentos.filter(p=>p.carro_id===c.id).reduce((a,p)=>a+Number(p.valor||0),0);
+    const custoPorKm=vidaUtil>0?((compra-revenda)/vidaUtil):0;
+    const roiMensal=compra>0?((recMensal/compra)*100):0;
+    const payback=recMensal>0?(compra/recMensal):0;
+    const mot=state.motoristas.find(m=>m.id===c.motorista_id);
+    return `<div class="card accent-blue">
+      <div style="font-weight:700;font-size:15px;margin-bottom:10px">${c.modelo} — ${c.placa} ${mot?`<span style="color:#6b7280;font-weight:400;font-size:13px">| ${mot.nome}</span>`:''}</div>
+      <div class="grid2" style="gap:8px">
+        <div style="background:#f9fafb;border-radius:8px;padding:10px;text-align:center">
+          <div style="font-size:16px;font-weight:700;color:#2563eb">${fmtR(compra)}</div><div style="font-size:11px;color:#6b7280">Valor compra</div>
+        </div>
+        <div style="background:#f9fafb;border-radius:8px;padding:10px;text-align:center">
+          <div style="font-size:16px;font-weight:700;color:#10b981">${fmtR(recMensal)}</div><div style="font-size:11px;color:#6b7280">Total recebido</div>
+        </div>
+        <div style="background:#f9fafb;border-radius:8px;padding:10px;text-align:center">
+          <div style="font-size:16px;font-weight:700;color:#8b5cf6">${roiMensal.toFixed(1)}%</div><div style="font-size:11px;color:#6b7280">ROI acumulado</div>
+        </div>
+        <div style="background:#f9fafb;border-radius:8px;padding:10px;text-align:center">
+          <div style="font-size:16px;font-weight:700;color:#f59e0b">${payback.toFixed(1)} meses</div><div style="font-size:11px;color:#6b7280">Payback estimado</div>
+        </div>
+        <div style="background:#f9fafb;border-radius:8px;padding:10px;text-align:center">
+          <div style="font-size:16px;font-weight:700;color:#06b6d4">R$ ${custoPorKm.toFixed(3).replace('.',',')}/km</div><div style="font-size:11px;color:#6b7280">Custo depreciação/km</div>
+        </div>
+        <div style="background:#f9fafb;border-radius:8px;padding:10px;text-align:center">
+          <div style="font-size:16px;font-weight:700;color:#ef4444">${fmtR(revenda)}</div><div style="font-size:11px;color:#6b7280">Revenda estimada</div>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function calcScore(mot,jornadas,multas,carros){
+  const jMot=jornadas.filter(j=>j.motorista_id===mot.id);
+  const carro=carros.find(c=>c.motorista_id===mot.id);
+  const multasMot=multas.filter(m=>m.carro_id===carro?.id&&!m.pago).length;
+  const totalBruto=jMot.reduce((a,j)=>a+Number(j.bruto||0),0);
+  const totalHoras=jMot.reduce((a,j)=>a+Number(j.horas||0),0);
+  const totalKm=jMot.reduce((a,j)=>a+Number(j.km||0),0);
+  const totalGastos=jMot.reduce((a,j)=>a+(j.gastos||[]).reduce((b,g)=>b+Number(g.valor||0),0),0);
+  const lucro=totalBruto-totalGastos;
+  const lucroHora=totalHoras>0?(lucro/totalHoras):0;
+  const lucroKm=totalKm>0?(lucro/totalKm):0;
+  const scoreHora=Math.min(100,(lucroHora/20)*100)*0.35;
+  const scoreKm=Math.min(100,(lucroKm/0.5)*100)*0.35;
+  const scoreMultas=Math.max(0,100-(multasMot*20))*0.30;
+  const score=Math.round(scoreHora+scoreKm+scoreMultas);
+  return {score,lucroHora,lucroKm,lucro,totalHoras,totalKm,multasMot};
+}
+
+function renderScore(motoristas,jornadas,multas,carros){
+  if(motoristas.length===0) return '<p class="empty">Nenhum motorista cadastrado.</p>';
+  const ranking=motoristas.map(m=>({...m,...calcScore(m,jornadas,multas,carros)})).sort((a,b)=>b.score-a.score);
+  const medalhas=['🥇','🥈','🥉'];
+  return `
+    <div class="card" style="margin-bottom:16px;background:linear-gradient(135deg,#1e3a5f,#2563eb);color:#fff">
+      <div style="font-weight:700;font-size:16px;margin-bottom:4px">🏆 Ranking da Frota MGP</div>
+      <div style="font-size:13px;opacity:.8">Score baseado em lucro/hora (35%) + lucro/km (35%) + sem multas (30%)</div>
+    </div>
+    ${ranking.map((m,i)=>{
+      const cor=m.score>=70?'#10b981':m.score>=40?'#f59e0b':'#ef4444';
+      const nomeFicticio=m.nome_ficticio||m.nome.split(' ')[0];
+      return `<div class="card">
+        <div style="display:flex;align-items:center;gap:14px">
+          <div style="font-size:28px">${medalhas[i]||'🏅'}</div>
+          <div style="flex:1">
+            <div style="font-weight:700;font-size:15px">${nomeFicticio}</div>
+            <div class="progress-bar" style="margin:6px 0"><div class="progress-fill" style="width:${m.score}%;background:${cor}"></div></div>
+            <div style="display:flex;justify-content:space-between;font-size:12px;color:#6b7280">
+              <span>Score: <b style="color:${cor}">${m.score}/100</b></span>
+              <span>R$ ${m.lucroHora.toFixed(2).replace('.',',')}/h</span>
+              <span>R$ ${m.lucroKm.toFixed(2).replace('.',',')}/km</span>
+              <span>${m.multasMot} multa(s)</span>
+            </div>
+          </div>
+        </div>
+      </div>`;
+    }).join('')}`;
+}
+
+function renderDRE(carros,motoristas,pagamentos,jornadas){
+  const agora=new Date();
+  const mesAtual=jornadas.filter(j=>{ const d=new Date(j.data+'T12:00:00'); return d.getMonth()===agora.getMonth()&&d.getFullYear()===agora.getFullYear(); });
+  const receitaTotal=pagamentos.reduce((a,p)=>a+Number(p.valor||0),0);
+  const gastosTotal=mesAtual.reduce((a,j)=>a+(j.gastos||[]).reduce((b,g)=>b+Number(g.valor||0),0),0);
+  const faturamentoMot=mesAtual.reduce((a,j)=>a+Number(j.bruto||0),0);
+  const lucroOp=receitaTotal-gastosTotal;
+  const margem=receitaTotal>0?((lucroOp/receitaTotal)*100):0;
+  return `
+    <div class="card accent-purple">
+      <div style="font-weight:700;font-size:16px;margin-bottom:16px">📊 DRE Simplificada — ${agora.toLocaleString('pt-BR',{month:'long',year:'numeric'})}</div>
+      <div style="border-bottom:1px solid #e5e7eb;padding-bottom:10px;margin-bottom:10px">
+        <div style="display:flex;justify-content:space-between;font-size:14px;margin-bottom:6px"><span>💰 Receita de Aluguéis</span><span style="font-weight:700;color:#10b981">${fmtR(receitaTotal)}</span></div>
+        <div style="display:flex;justify-content:space-between;font-size:14px"><span>🚗 Faturamento Motoristas</span><span style="font-weight:700;color:#2563eb">${fmtR(faturamentoMot)}</span></div>
+      </div>
+      <div style="border-bottom:1px solid #e5e7eb;padding-bottom:10px;margin-bottom:10px">
+        <div style="display:flex;justify-content:space-between;font-size:14px"><span>📤 Custos Operacionais</span><span style="font-weight:700;color:#ef4444">- ${fmtR(gastosTotal)}</span></div>
+      </div>
+      <div style="display:flex;justify-content:space-between;font-size:15px;font-weight:700">
+        <span>💵 Lucro Operacional</span><span style="color:${lucroOp>=0?'#10b981':'#ef4444'}">${fmtR(lucroOp)}</span>
+      </div>
+      <div style="margin-top:10px;font-size:13px;color:#6b7280">Margem de lucro: <b>${margem.toFixed(1)}%</b> | Veículos: <b>${carros.length}</b> | Motoristas: <b>${motoristas.length}</b></div>
+    </div>`;
+}
+
+// ══════════════════════════════════════════════════════════════════════════
+// USUÁRIOS
+// ══════════════════════════════════════════════════════════════════════════
+function renderUsuarios(){
+  const {usuarios}=state;
+  const pLabel={admin:'👑 Admin',funcionario:'⚙️ Funcionário',motorista:'🚗 Motorista'};
+  const pColor={admin:'#8b5cf6',funcionario:'#2563eb',motorista:'#10b981'};
+  $('page-usuarios').innerHTML=`
+    <div class="page-header"><h2>Usuários</h2><button class="btn btn-primary" onclick="abrirModalUsuario()">+ Novo</button></div>
+    ${usuarios.map(u=>`<div class="card"><div class="card-row">
+      <div><div style="font-weight:700">${u.nome} <span class="badge" style="background:${(pColor[u.perfil]||'#6b7280')}22;color:${pColor[u.perfil]||'#6b7280'}">${pLabel[u.perfil]||u.perfil}</span></div>
+      <div style="font-size:13px;color:#6b7280">Login: ${u.login||u.telefone} | ${u.ativo!==false?'✅ Ativo':'❌ Inativo'}</div></div>
+      <div class="row-actions">
+        <button class="btn btn-ghost btn-sm" onclick="resetSenha('${u.id}')">🔑 Reset</button>
+        <button class="btn btn-danger btn-sm" onclick="delUsuario('${u.id}')">✕</button>
+      </div></div></div>`).join('')}`;
+}
+window.abrirModalUsuario=()=>{
+  openModal('Novo Usuário',`
+    <div class="field"><label>Nome *</label><input id="f-n"/></div>
+    <div class="field"><label>Login *</label><input id="f-l" placeholder="Ex: funcionario1"/></div>
+    <div class="field"><label>Perfil</label><select id="f-p"><option value="funcionario">⚙️ Funcionário</option><option value="admin">👑 Admin</option></select></div>
+    <div style="background:#eff6ff;border-radius:8px;padding:10px;font-size:13px;color:#2563eb">🔑 Senha inicial: <b>mgp123</b></div>
+  `,async()=>{
+    const n=$('f-n').value.trim(),l=$('f-l').value.trim();if(!n||!l)return alert('Nome e login obrigatórios.');
+    await fbAdd('usuarios',{nome:n,login:l,senha:'mgp123',perfil:$('f-p').value,ativo:true});
+    closeModal();toast('Usuário criado! ✅');
+  });
+};
+window.resetSenha=async id=>{if(confirm('Redefinir senha para mgp123?')){await fbUpd('usuarios',id,{senha:'mgp123'});toast('Senha redefinida! ✅');}};
+window.delUsuario=async id=>{if(confirm('Remover usuário?')){await fbDel('usuarios',id);toast('Removido.');}};
+
+function renderMinhaConta(){
+  $('page-minhaconta').innerHTML=`
+    <div class="page-header"><h2>Minha Conta</h2></div>
+    <div class="card">
+      <h3 style="color:#1e3a5f;margin-bottom:16px">👤 ${currentUser.nome}</h3>
+      <div style="font-size:14px;color:#6b7280;margin-bottom:16px">Login: <b>${currentUser.login||currentUser.telefone}</b></div>
+      <h4 style="margin-bottom:12px">🔑 Alterar Senha</h4>
+      <div class="field"><label>Senha Atual</label><input type="password" id="sa"/></div>
+      <div class="field"><label>Nova Senha</label><input type="password" id="sn"/></div>
+      <div class="field"><label>Confirmar</label><input type="password" id="sc"/></div>
+      <button class="btn btn-primary" onclick="alterarSenha()">Salvar</button>
+    </div>`;
+}
+window.alterarSenha=async()=>{
+  const a=$('sa').value,n=$('sn').value,c=$('sc').value;
+  if(a!==currentUser.senha)return alert('Senha atual incorreta.');
+  if(n.length<4)return alert('Mínimo 4 caracteres.');
+  if(n!==c)return alert('As senhas não coincidem.');
+  await fbUpd('usuarios',currentUser.id,{senha:n});currentUser.senha=n;
+  toast('Senha alterada! ✅');$('sa').value='';$('sn').value='';$('sc').value='';
+};
+
+// ══════════════════════════════════════════════════════════════════════════
+// ÁREA DO MOTORISTA
+// ══════════════════════════════════════════════════════════════════════════
+function iniciarMotorista(user){
+  $('motorista-app').classList.remove('hidden');
+  ['motoristas','carros','pagamentos','multas','manutencoes','jornadas','abastecimentos'].forEach(col=>{
+    fbListen(col,d=>{state[col]=d;renderMotPage(user);});
+  });
+}
+
+function renderMotPage(user){
+  const mot=state.motoristas.find(m=>m.id===user.motorista_id);
+  const carro=state.carros.find(c=>c.motorista_id===user.motorista_id);
+  $('mot-nome').textContent=mot?'Olá, '+mot.nome.split(' ')[0]+'! 👋':'Olá!';
+  $('mot-carro').textContent=carro?'🚗 '+carro.modelo+' — '+carro.placa:'Sem veículo vinculado';
+  if(!mot||!carro){$('mot-content').innerHTML=`<div class="mot-card"><p style="color:#6b7280;text-align:center;padding:20px">Nenhum veículo vinculado.<br>Fale com a MGP Locadora.</p></div>`;return;}
+  const abas=[{id:'hoje',l:'📅 Hoje'},{id:'semana',l:'📊 Semana'},{id:'mes',l:'📆 Mês'},{id:'veiculo',l:'🚗 Veículo'},{id:'abast',l:'⛽ Combustível'},{id:'cfg',l:'⚙️ Config'}];
+  const tabBar=`<div class="tab-bar">${abas.map(a=>`<button class="tab-btn ${motAba===a.id?'active':''}" onclick="setMotAba('${a.id}')">${a.l}</button>`).join('')}</div>`;
+  let content='';
+  if(motAba==='hoje') content=renderMotHoje(user,mot,carro);
+  else if(motAba==='semana') content=renderMotSemana(user,carro,mot);
+  else if(motAba==='mes') content=renderMotMes(user,carro,mot);
+  else if(motAba==='veiculo') content=renderMotVeiculo(user,mot,carro);
+  else if(motAba==='abast') content=renderMotAbastecimento(user,carro);
+  else if(motAba==='cfg') content=renderMotConfig(user,mot);
+  $('mot-content').innerHTML=tabBar+content;
+  if(motAba==='hoje') iniciarTimerDisplay(user);
+}
+
+window.setMotAba=aba=>{motAba=aba;if(currentUser)renderMotPage(currentUser);};
+
+// ─── HELPERS FINANCEIROS ──────────────────────────────────────────────────
+function calcJornada(j,carro){
+  const bruto=Number(j.bruto||0);
+  const gastos=(j.gastos||[]).reduce((a,g)=>a+Number(g.valor||0),0);
+  const horas=Number(j.horas||0);
+  const km=Number(j.km||0);
+  const liquido=bruto-gastos;
+  // Custo depreciação
+  const compra=Number(carro?.valor_compra||0),revenda=Number(carro?.valor_revenda||0),vidaUtil=Number(carro?.vida_util_km||200000);
+  const custDepKm=vidaUtil>0?((compra-revenda)/vidaUtil):0;
+  const custDepTotal=custDepKm*km;
+  const lucroReal=liquido-custDepTotal;
+  const lucroHora=horas>0?(lucroReal/horas):0;
+  const lucroKm=km>0?(lucroReal/km):0;
+  const ganhoKm=km>0?(bruto/km):0;
+  const custoKm=km>0?(gastos/km):0;
+  return {bruto,gastos,horas,km,liquido,custDepTotal,custDepKm,lucroReal,lucroHora,lucroKm,ganhoKm,custoKm};
+}
+
+function getAlertasHoje(dados,config){
+  const alertas=[];
+  const {lucroReal,lucroHora,custoKm,ganhoKm,bruto}=dados;
+  const meta=Number(config?.meta_diaria||0);
+  if(lucroReal<0) alertas.push({tipo:'red',msg:'🚨 Atenção! Você está operando no prejuízo hoje.'});
+  if(ganhoKm>0&&custoKm>0&&ganhoKm<custoKm) alertas.push({tipo:'red',msg:`⚠️ Ganho por km (${fmtR(ganhoKm)}) abaixo do custo (${fmtR(custoKm)}). Verifique seus gastos!`});
+  if(meta>0&&bruto<meta*0.5&&dados.horas>4) alertas.push({tipo:'yellow',msg:`📉 Você está em ${((bruto/meta)*100).toFixed(0)}% da meta diária. Vamos acelerar!`});
+  if(meta>0&&bruto>=meta) alertas.push({tipo:'green',msg:'🎉 Parabéns! Você bateu a meta diária!'});
+  if(lucroHora>0&&lucroHora<15) alertas.push({tipo:'yellow',msg:`⏱️ Lucro por hora (${fmtR(lucroHora)}/h) está baixo. Avalie se vale continuar hoje.`});
+  return alertas;
+}
+
+// ─── ABA HOJE ─────────────────────────────────────────────────────────────
+function renderMotHoje(user,mot,carro){
+  const hoje=todayStr();
+  const j=(state.jornadas||[]).find(x=>x.data===hoje&&x.motorista_id===user.motorista_id)||{gastos:[],bruto:0,km:0,horas:0,horas_segundos:0};
+  const config=mot.config||{};
+  const d=calcJornada(j,carro);
+  const aluguelDia=Number(config.aluguel_semanal||0)/6;
+  const lucroComAluguel=d.lucroReal-aluguelDia;
+  const metaDia=Number(config.meta_diaria||0);
+  const progMeta=metaDia>0?Math.min(100,(d.bruto/metaDia)*100):0;
+  const alertas=getAlertasHoje({...d,bruto:d.bruto},config);
+  // Previsão
+  const previsao=d.horas>0?(d.bruto/d.horas)*8:0;
+  const faltaMeta=metaDia>0?Math.max(0,metaDia-d.bruto):0;
+  const horasFalta=d.horas>0&&d.bruto>0?(faltaMeta/(d.bruto/d.horas)):0;
+
+  return `
+  <!-- ALERTAS -->
+  ${alertas.map(a=>`<div class="alert-box alert-${a.tipo}">${a.msg}</div>`).join('')}
+
+  <!-- CRONÔMETRO -->
+  <div class="mot-stat" style="text-align:center;padding:20px">
+    <div style="font-size:13px;opacity:.8;margin-bottom:8px">⏱️ Tempo na Jornada</div>
+    <div id="timer-display" style="font-size:40px;font-weight:800;letter-spacing:3px;font-variant-numeric:tabular-nums">${formatarTempo(j.horas_segundos||0)}</div>
+    <div style="margin-top:14px">
+      ${!j.jornada_ativa
+        ?`<button onclick="iniciarJornada('${user.motorista_id}','${hoje}')" style="background:#10b981;color:#fff;border:none;border-radius:10px;padding:11px 28px;font-size:15px;font-weight:700;cursor:pointer">▶ Iniciar Jornada</button>`
+        :`<button onclick="encerrarJornada('${user.motorista_id}','${hoje}')" style="background:#ef4444;color:#fff;border:none;border-radius:10px;padding:11px 28px;font-size:15px;font-weight:700;cursor:pointer">⏹ Encerrar Jornada</button>`}
+    </div>
+  </div>
+
+  <!-- META DO DIA -->
+  ${metaDia>0?`<div class="mot-card">
+    <div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:6px">
+      <span style="font-weight:600">🎯 Meta do Dia: ${fmtR(metaDia)}</span>
+      <span style="color:#2563eb;font-weight:700">${progMeta.toFixed(0)}%</span>
+    </div>
+    <div class="progress-bar"><div class="progress-fill" style="width:${progMeta}%;background:${progMeta>=100?'#10b981':'#2563eb'}"></div></div>
+    ${faltaMeta>0?`<div style="font-size:12px;color:#6b7280;margin-top:6px">Falta ${fmtR(faltaMeta)} para bater a meta${horasFalta>0?' · Estimativa: mais '+horasFalta.toFixed(1)+'h na média atual':''}</div>`:''}
+  </div>`:''}
+
+  <!-- KPIs DO DIA -->
+  ${d.bruto>0?`<div class="kpi-grid">
+    <div class="kpi"><div class="val" style="color:#10b981">${fmtR(d.bruto)}</div><div class="lbl">Faturamento</div></div>
+    <div class="kpi"><div class="val" style="color:${d.lucroReal>=0?'#2563eb':'#ef4444'}">${fmtR(d.lucroReal)}</div><div class="lbl">Lucro Real</div></div>
+    <div class="kpi"><div class="val" style="color:${lucroComAluguel>=0?'#10b981':'#ef4444'}">${fmtR(lucroComAluguel)}</div><div class="lbl">Com Aluguel</div></div>
+    <div class="kpi"><div class="val" style="color:#8b5cf6">${fmtR(d.lucroHora)}/h</div><div class="lbl">Lucro/Hora</div></div>
+    <div class="kpi"><div class="val" style="color:#06b6d4">R$ ${d.lucroKm.toFixed(2).replace('.',',')}/km</div><div class="lbl">Lucro/KM</div></div>
+    <div class="kpi"><div class="val" style="color:#f59e0b">R$ ${d.custoKm.toFixed(2).replace('.',',')}/km</div><div class="lbl">Custo/KM</div></div>
+    <div class="kpi"><div class="val" style="color:#374151">${d.km} km</div><div class="lbl">KM Rodados</div></div>
+    <div class="kpi"><div class="val" style="color:#374151">${fmtR(previsao)}</div><div class="lbl">Previsão Dia</div></div>
+  </div>
+
+  <!-- RESUMO DETALHADO -->
+  <div class="mot-card" style="border-left:4px solid #2563eb">
+    <div style="font-weight:700;margin-bottom:10px">📋 Resumo do Dia</div>
+    <div style="font-size:13px;line-height:1.8">
+      <div style="display:flex;justify-content:space-between"><span>Faturamento bruto</span><span style="font-weight:600;color:#10b981">${fmtR(d.bruto)}</span></div>
+      <div style="display:flex;justify-content:space-between"><span>(-) Gastos do dia</span><span style="font-weight:600;color:#ef4444">- ${fmtR(d.gastos)}</span></div>
+      <div style="display:flex;justify-content:space-between"><span>(-) Depreciação veículo</span><span style="font-weight:600;color:#f59e0b">- ${fmtR(d.custDepTotal)}</span></div>
+      <div style="border-top:1px dashed #e5e7eb;margin:4px 0"></div>
+      <div style="display:flex;justify-content:space-between"><span style="font-weight:700">Lucro Real</span><span style="font-weight:800;color:${d.lucroReal>=0?'#10b981':'#ef4444'}">${fmtR(d.lucroReal)}</span></div>
+      <div style="display:flex;justify-content:space-between"><span>(-) Aluguel diário</span><span style="font-weight:600;color:#6b7280">- ${fmtR(aluguelDia)}</span></div>
+      <div style="border-top:2px solid #e5e7eb;margin:4px 0"></div>
+      <div style="display:flex;justify-content:space-between"><span style="font-weight:700">Lucro Líquido Final</span><span style="font-weight:800;color:${lucroComAluguel>=0?'#2563eb':'#ef4444'}">${fmtR(lucroComAluguel)}</span></div>
+    </div>
+  </div>`:''}
+
+  <!-- LANÇAR FATURAMENTO -->
+  <div class="mot-card">
+    <div style="font-weight:700;font-size:15px;margin-bottom:12px">💰 Lançar Faturamento</div>
+    <div class="grid2">
+      <div class="field"><label>Faturamento Bruto (R$)</label><input type="number" id="mot-bruto" step="0.01" placeholder="0,00" value="${d.bruto||''}"/></div>
+      <div class="field"><label>KM Rodados</label><input type="number" id="mot-km" placeholder="0" value="${d.km||''}"/></div>
+    </div>
+    <div class="field"><label>Horas Trabalhadas</label><input type="number" id="mot-horas" step="0.5" placeholder="Ex: 8" value="${d.horas||''}"/></div>
+    <button class="btn btn-primary btn-block" onclick="salvarFaturamento('${user.motorista_id}','${hoje}')">💾 Salvar Faturamento</button>
+  </div>
+
+  <!-- RECEITAS POR PLATAFORMA -->
+  <div class="mot-card">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+      <div style="font-weight:700;font-size:15px">📱 Receitas por Plataforma</div>
+      <button onclick="abrirModalReceita('${user.motorista_id}','${hoje}')" class="btn btn-primary btn-sm">+ Receita</button>
+    </div>
+    ${(j.receitas||[]).length===0?'<p style="color:#9ca3af;font-size:13px;text-align:center">Nenhuma receita lançada.</p>':''}
+    ${(j.receitas||[]).map((r,i)=>`<div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid #f3f4f6">
+      <div><div style="font-size:13px;font-weight:600">${r.plataforma}</div>
+      <div style="font-size:12px;color:#6b7280">Bruto:${fmtR(r.bruto)} | Comissão:${r.comissao}% | Gorjeta:${fmtR(r.gorjeta||0)} | Bônus:${fmtR(r.bonus||0)}</div>
+      <div style="font-size:13px;font-weight:700;color:#10b981">Líquido: ${fmtR(Number(r.bruto)*(1-r.comissao/100)+Number(r.gorjeta||0)+Number(r.bonus||0))}</div></div>
+      <button onclick="removerReceita('${user.motorista_id}','${hoje}',${i})" style="background:none;border:none;color:#ef4444;cursor:pointer">✕</button>
+    </div>`).join('')}
+  </div>
+
+  <!-- GASTOS DO DIA -->
+  <div class="mot-card">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+      <div style="font-weight:700;font-size:15px">📤 Gastos do Dia</div>
+      <button onclick="abrirModalGasto('${user.motorista_id}','${hoje}')" class="btn btn-primary btn-sm">+ Gasto</button>
+    </div>
+    ${(j.gastos||[]).length===0?'<p style="color:#9ca3af;font-size:13px;text-align:center">Nenhum gasto lançado.</p>':''}
+    ${(j.gastos||[]).map((g,i)=>`<div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid #f3f4f6">
+      <div><div style="font-size:13px;font-weight:600">${g.categoria} ${g.descricao?'— '+g.descricao:''}</div>
+      <div style="font-size:13px;font-weight:700;color:#ef4444">- ${fmtR(g.valor)}</div></div>
+      <button onclick="removerGasto('${user.motorista_id}','${hoje}',${i})" style="background:none;border:none;color:#ef4444;cursor:pointer">✕</button>
+    </div>`).join('')}
+    ${(j.gastos||[]).length>0?`<div style="text-align:right;margin-top:8px;font-weight:700;color:#ef4444">Total: - ${fmtR(d.gastos)}</div>`:''}
+  </div>`;
+}
+
+// ─── ABA SEMANA ───────────────────────────────────────────────────────────
+function renderMotSemana(user,carro,mot){
+  const agora=new Date();
+  const ini=new Date(agora);ini.setDate(agora.getDate()-agora.getDay());
+  const fim=new Date(ini);fim.setDate(ini.getDate()+6);
+  const jSem=(state.jornadas||[]).filter(j=>{const d=new Date(j.data+'T12:00:00');return d>=ini&&d<=fim&&j.motorista_id===user.motorista_id;});
+  const totais=jSem.reduce((a,j)=>{const d=calcJornada(j,carro);return{bruto:a.bruto+d.bruto,gastos:a.gastos+d.gastos,km:a.km+d.km,horas:a.horas+d.horas,lucroReal:a.lucroReal+d.lucroReal};},{bruto:0,gastos:0,km:0,horas:0,lucroReal:0});
+  const config=mot.config||{};
+  const aluguelSem=Number(config.aluguel_semanal||0);
+  const lucroFinal=totais.lucroReal-aluguelSem;
+  const metaSem=Number(config.meta_semanal||0);
+  const prog=metaSem>0?Math.min(100,(totais.bruto/metaSem)*100):0;
+  const lucroHora=totais.horas>0?(totais.lucroReal/totais.horas):0;
+  const lucroKm=totais.km>0?(totais.lucroReal/totais.km):0;
+  return `
+  ${metaSem>0?`<div class="mot-card">
+    <div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:6px"><span style="font-weight:600">🎯 Meta Semanal: ${fmtR(metaSem)}</span><span style="color:#2563eb;font-weight:700">${prog.toFixed(0)}%</span></div>
+    <div class="progress-bar"><div class="progress-fill" style="width:${prog}%;background:${prog>=100?'#10b981':'#2563eb'}"></div></div>
+    ${prog<100?`<div style="font-size:12px;color:#6b7280;margin-top:4px">Falta ${fmtR(Math.max(0,metaSem-totais.bruto))} para bater a meta</div>`:'<div style="font-size:12px;color:#10b981;margin-top:4px">🎉 Meta atingida!</div>'}
+  </div>`:''}
+  <div class="mot-stat">
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+      <div style="text-align:center"><div style="font-size:11px;opacity:.8">Sem aluguel</div><div style="font-size:22px;font-weight:800">${fmtR(totais.lucroReal)}</div></div>
+      <div style="text-align:center"><div style="font-size:11px;opacity:.8">Com aluguel</div><div style="font-size:22px;font-weight:800">${fmtR(lucroFinal)}</div></div>
+    </div>
+  </div>
+  <div class="kpi-grid">
+    <div class="kpi"><div class="val" style="color:#10b981">${fmtR(totais.bruto)}</div><div class="lbl">Faturamento</div></div>
+    <div class="kpi"><div class="val" style="color:#ef4444">${fmtR(totais.gastos)}</div><div class="lbl">Gastos</div></div>
+    <div class="kpi"><div class="val" style="color:#8b5cf6">${fmtR(lucroHora)}/h</div><div class="lbl">Lucro/Hora</div></div>
+    <div class="kpi"><div class="val" style="color:#06b6d4">R$ ${lucroKm.toFixed(2).replace('.',',')}/km</div><div class="lbl">Lucro/KM</div></div>
+    <div class="kpi"><div class="val" style="color:#374151">${totais.km} km</div><div class="lbl">KM Rodados</div></div>
+    <div class="kpi"><div class="val" style="color:#374151">${totais.horas.toFixed(1)}h</div><div class="lbl">Horas</div></div>
+  </div>
+  <div class="mot-card">
+    <div style="font-weight:700;margin-bottom:10px">📅 Dias da Semana</div>
+    ${jSem.length===0?'<p style="color:#9ca3af;font-size:13px;text-align:center">Nenhum dia lançado.</p>':''}
+    ${jSem.sort((a,b)=>new Date(b.data)-new Date(a.data)).map(j=>{const d=calcJornada(j,carro);return`<div style="padding:9px 0;border-bottom:1px solid #f3f4f6">
+      <div style="display:flex;justify-content:space-between"><span style="font-size:13px;font-weight:600">${fmt(j.data)}</span><span style="font-size:13px;font-weight:700;color:${d.lucroReal>=0?'#10b981':'#ef4444'}">${fmtR(d.lucroReal)}</span></div>
+      <div style="font-size:12px;color:#6b7280">Bruto:${fmtR(d.bruto)} | Gastos:${fmtR(d.gastos)} | ${d.km}km | ${d.horas}h</div>
+    </div>`;}).join('')}
+  </div>`;
+}
+
+// ─── ABA MÊS ──────────────────────────────────────────────────────────────
+function renderMotMes(user,carro,mot){
+  const agora=new Date();
+  const jMes=(state.jornadas||[]).filter(j=>{const d=new Date(j.data+'T12:00:00');return d.getMonth()===agora.getMonth()&&d.getFullYear()===agora.getFullYear()&&j.motorista_id===user.motorista_id;});
+  const totais=jMes.reduce((a,j)=>{const d=calcJornada(j,carro);return{bruto:a.bruto+d.bruto,gastos:a.gastos+d.gastos,km:a.km+d.km,horas:a.horas+d.horas,lucroReal:a.lucroReal+d.lucroReal};},{bruto:0,gastos:0,km:0,horas:0,lucroReal:0});
+  const config=mot.config||{};
+  const aluguelMes=Number(config.aluguel_semanal||0)*4;
+  const lucroFinal=totais.lucroReal-aluguelMes;
+  const metaMes=Number(config.meta_mensal||0);
+  const prog=metaMes>0?Math.min(100,(totais.bruto/metaMes)*100):0;
+  const dias=jMes.filter(j=>j.bruto>0).length;
+  const mediaDia=dias>0?(totais.bruto/dias):0;
+  const diasRestantes=new Date(agora.getFullYear(),agora.getMonth()+1,0).getDate()-agora.getDate();
+  const previsaoMes=totais.bruto+(mediaDia*diasRestantes);
+  const lucroHora=totais.horas>0?(totais.lucroReal/totais.horas):0;
+  const lucroKm=totais.km>0?(totais.lucroReal/totais.km):0;
+  const porCat={};
+  jMes.forEach(j=>(j.gastos||[]).forEach(g=>{porCat[g.categoria]=(porCat[g.categoria]||0)+Number(g.valor||0);}));
+  return `
+  ${metaMes>0?`<div class="mot-card">
+    <div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:6px"><span style="font-weight:600">🎯 Meta Mensal: ${fmtR(metaMes)}</span><span style="color:#2563eb;font-weight:700">${prog.toFixed(0)}%</span></div>
+    <div class="progress-bar"><div class="progress-fill" style="width:${prog}%;background:${prog>=100?'#10b981':'#2563eb'}"></div></div>
+  </div>`:''}
+  <div class="mot-stat">
+    <div style="font-size:13px;opacity:.8;margin-bottom:6px">📆 ${agora.toLocaleString('pt-BR',{month:'long',year:'numeric'})}</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+      <div style="text-align:center"><div style="font-size:11px;opacity:.8">Sem aluguel</div><div style="font-size:22px;font-weight:800">${fmtR(totais.lucroReal)}</div></div>
+      <div style="text-align:center"><div style="font-size:11px;opacity:.8">Com aluguel</div><div style="font-size:22px;font-weight:800">${fmtR(lucroFinal)}</div></div>
+    </div>
+  </div>
+  <div class="kpi-grid">
+    <div class="kpi"><div class="val" style="color:#10b981">${fmtR(totais.bruto)}</div><div class="lbl">Faturamento</div></div>
+    <div class="kpi"><div class="val" style="color:#ef4444">${fmtR(totais.gastos)}</div><div class="lbl">Gastos</div></div>
+    <div class="kpi"><div class="val" style="color:#f59e0b">${dias} dias</div><div class="lbl">Dias trabalhados</div></div>
+    <div class="kpi"><div class="val" style="color:#2563eb">${fmtR(mediaDia)}</div><div class="lbl">Média/dia</div></div>
+    <div class="kpi"><div class="val" style="color:#8b5cf6">${fmtR(lucroHora)}/h</div><div class="lbl">Lucro/Hora</div></div>
+    <div class="kpi"><div class="val" style="color:#06b6d4">R$ ${lucroKm.toFixed(2).replace('.',',')}/km</div><div class="lbl">Lucro/KM</div></div>
+    <div class="kpi"><div class="val" style="color:#374151">${totais.km} km</div><div class="lbl">KM Rodados</div></div>
+    <div class="kpi"><div class="val" style="color:#10b981">${fmtR(previsaoMes)}</div><div class="lbl">Previsão Mês</div></div>
+  </div>
+  ${Object.keys(porCat).length>0?`<div class="mot-card">
+    <div style="font-weight:700;margin-bottom:10px">📤 Gastos por Categoria</div>
+    ${Object.entries(porCat).sort((a,b)=>b[1]-a[1]).map(([c,v])=>`<div style="display:flex;justify-content:space-between;padding:7px 0;border-bottom:1px solid #f3f4f6"><span style="font-size:13px">${c}</span><span style="font-size:13px;font-weight:700;color:#ef4444">${fmtR(v)}</span></div>`).join('')}
+  </div>`:''}`;
+}
+
+// ─── ABA VEÍCULO ──────────────────────────────────────────────────────────
+function renderMotVeiculo(user,mot,carro){
+  const multas=(state.multas||[]).filter(m=>m.carro_id===carro.id);
+  const multPend=multas.filter(m=>!m.pago);
+  const mans=(state.manutencoes||[]).filter(m=>m.carro_id===carro.id);
+  const pags=(state.pagamentos||[]).filter(p=>p.carro_id===carro.id);
+  const totalPago=pags.reduce((a,p)=>a+Number(p.valor||0),0);
+  return `
+  <div class="mot-card"><div style="font-weight:700;font-size:15px;margin-bottom:8px">🚗 Meu Veículo</div>
+    <div style="font-size:15px;font-weight:700">${carro.modelo} — ${carro.placa}</div>
+    <div style="font-size:13px;color:#6b7280">Ano:${carro.ano||'—'} | Cor:${carro.cor||'—'}</div>
+  </div>
+  <div class="mot-card"><div style="font-weight:700;margin-bottom:10px">💰 Pagamentos do Aluguel</div>
+    <div style="font-size:20px;font-weight:800;color:#10b981;margin-bottom:8px">${fmtR(totalPago)} pago no total</div>
+    ${pags.slice(0,5).map(p=>`<div style="display:flex;justify-content:space-between;padding:7px 0;border-bottom:1px solid #f3f4f6">
+      <div><div style="font-size:13px;font-weight:600;color:#10b981">${fmtR(p.valor)}</div><div style="font-size:12px;color:#6b7280">${fmt(p.data)} · ${p.forma||'—'} ${p.descricao?'· '+p.descricao:''}</div></div>
+      <span class="badge" style="background:#10b98122;color:#10b981">✓</span>
+    </div>`).join('')}
+  </div>
+  ${multPend.length>0?`<div class="mot-card" style="border-left:4px solid #ef4444">
+    <div style="font-weight:700;color:#ef4444;margin-bottom:10px">🚨 Multas Pendentes (${multPend.length})</div>
+    ${multPend.map(m=>`<div style="padding:8px 0;border-bottom:1px solid #f3f4f6">
+      <div style="font-size:13px;font-weight:600">${m.descricao}</div>
+      <div style="font-size:12px;color:#6b7280">${fmt(m.data)} ${m.vencimento?'| Vence:'+fmt(m.vencimento):''}</div>
+      ${m.valor?`<div style="font-size:13px;color:#ef4444;font-weight:600">${fmtR(m.valor)} ${m.pontos?'| '+m.pontos+' pts CNH':''}</div>`:''}
+      <div style="font-size:12px;color:#6b7280">${m.resp==='motorista'?'⚠️ Você paga':'✅ MGP paga'}</div>
+    </div>`).join('')}
+  </div>`:`<div class="mot-card" style="border-left:4px solid #10b981"><div style="color:#10b981;font-weight:700">✅ Nenhuma multa pendente!</div></div>`}
+  <div class="mot-card"><div style="font-weight:700;margin-bottom:10px">🔧 Manutenções</div>
+    ${mans.length===0?'<p style="color:#9ca3af;font-size:13px">Nenhuma registrada.</p>':''}
+    ${mans.slice(0,5).map(m=>`<div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid #f3f4f6">
+      <div><div style="font-size:13px;font-weight:600">${m.tipo}</div><div style="font-size:12px;color:#6b7280">${fmt(m.data)} ${m.km?'| KM:'+m.km:''} ${m.proxima_km?'| Próx:'+m.proxima_km+'km':''}</div></div>
+      <span class="badge" style="background:${m.ok?'#10b98122':'#f59e0b22'};color:${m.ok?'#10b981':'#f59e0b'}">${m.ok?'✓':'Pend.'}</span>
+    </div>`).join('')}
+  </div>
+  <div class="mot-card" style="text-align:center">
+    <div style="font-weight:700;margin-bottom:8px">📞 Suporte MGP</div>
+    <a href="https://wa.me/55" style="background:#25d366;color:#fff;border-radius:10px;padding:10px 24px;font-weight:700;font-size:14px;text-decoration:none;display:inline-block">💬 WhatsApp MGP</a>
+  </div>`;
+}
+
+// ─── ABA COMBUSTÍVEL ──────────────────────────────────────────────────────
+function renderMotAbastecimento(user,carro){
+  const abast=(state.abastecimentos||[]).filter(a=>a.motorista_id===user.motorista_id).sort((a,b)=>new Date(b.data)-new Date(a.data));
+  const ultimo=abast[0];
+  const consumoMedio=abast.length>=2?abast.slice(0,5).reduce((a,x,i,arr)=>{if(i===0)return a;const km=(arr[i-1].km_atual||0)-(x.km_atual||0);const l=arr[i-1].litros||0;return a+(l>0?km/l:0);},(0))/(Math.min(abast.length-1,4)):0;
+  return `
+  <div class="mot-card">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+      <div style="font-weight:700;font-size:15px">⛽ Registrar Abastecimento</div>
+    </div>
+    <div class="grid2">
+      <div class="field"><label>Data</label><input type="date" id="ab-d" value="${todayStr()}"/></div>
+      <div class="field"><label>Litros</label><input type="number" id="ab-l" step="0.01" placeholder="Ex: 30"/></div>
+    </div>
+    <div class="grid2">
+      <div class="field"><label>Valor Total (R$)</label><input type="number" id="ab-v" step="0.01"/></div>
+      <div class="field"><label>KM Atual</label><input type="number" id="ab-km"/></div>
+    </div>
+    <button class="btn btn-primary btn-block" onclick="salvarAbastecimento('${user.motorista_id}','${carro.id}')">💾 Salvar Abastecimento</button>
+  </div>
+  ${consumoMedio>0?`<div class="mot-stat">
+    <div style="font-size:13px;opacity:.8;margin-bottom:4px">📊 Eficiência do Veículo</div>
+    <div style="font-size:28px;font-weight:800">${consumoMedio.toFixed(1)} km/l</div>
+    <div style="font-size:13px;opacity:.8">Consumo médio dos últimos abastecimentos</div>
+    ${ultimo?`<div style="font-size:13px;opacity:.8;margin-top:4px">Custo/km: R$ ${(((ultimo.valor||0)/(ultimo.litros||1))/consumoMedio).toFixed(3).replace('.',',')}</div>`:''}
+  </div>`:''}
+  <div class="mot-card">
+    <div style="font-weight:700;margin-bottom:10px">📋 Histórico</div>
+    ${abast.length===0?'<p style="color:#9ca3af;font-size:13px;text-align:center">Nenhum abastecimento.</p>':''}
+    ${abast.slice(0,10).map((a,i)=>{
+      const consumo=i<abast.length-1&&abast[i+1]?((a.km_atual||0)-(abast[i+1].km_atual||0))/(a.litros||1):0;
+      return`<div style="padding:9px 0;border-bottom:1px solid #f3f4f6">
+        <div style="display:flex;justify-content:space-between"><span style="font-size:13px;font-weight:600">${fmt(a.data)}</span><span style="font-size:13px;font-weight:700;color:#f59e0b">${fmtR(a.valor)}</span></div>
+        <div style="font-size:12px;color:#6b7280">${a.litros}L | KM:${a.km_atual||'—'} ${consumo>0?'| '+consumo.toFixed(1)+' km/l':''}</div>
+      </div>`;
+    }).join('')}
+  </div>`;
+}
+
+window.salvarAbastecimento=async(motId,carroId)=>{
+  const litros=Number($('ab-l')?.value||0),valor=Number($('ab-v')?.value||0),km=Number($('ab-km')?.value||0);
+  if(!litros||!valor)return alert('Preencha litros e valor.');
+  await fbAdd('abastecimentos',{motorista_id:motId,carro_id:carroId,data:$('ab-d').value,litros,valor,km_atual:km});
+  toast('Abastecimento registrado! ✅');
+};
+
+// ─── ABA CONFIG ───────────────────────────────────────────────────────────
+function renderMotConfig(user,mot){
+  const cfg=mot.config||{};
+  return `
+  <div class="mot-card">
+    <div style="font-weight:700;font-size:15px;margin-bottom:12px">🎯 Metas</div>
+    <div class="field"><label>Meta Diária (R$)</label><input type="number" id="cfg-dia" step="0.01" value="${cfg.meta_diaria||''}"/></div>
+    <div class="field"><label>Meta Semanal (R$)</label><input type="number" id="cfg-sem" step="0.01" value="${cfg.meta_semanal||''}"/></div>
+    <div class="field"><label>Meta Mensal (R$)</label><input type="number" id="cfg-mes" step="0.01" value="${cfg.meta_mensal||''}"/></div>
+    <div class="field"><label>Aluguel Semanal (R$)</label><input type="number" id="cfg-alg" step="0.01" value="${cfg.aluguel_semanal||''}"/></div>
+    <div class="field"><label>Nome no Ranking (pode ser fictício)</label><input id="cfg-nick" placeholder="Ex: Relâmpago, Monstro..." value="${mot.nome_ficticio||''}"/></div>
+    <button class="btn btn-primary btn-block" onclick="salvarConfig('${user.motorista_id}')">💾 Salvar Configurações</button>
+  </div>
+  <div class="mot-card">
+    <div style="font-weight:700;font-size:15px;margin-bottom:12px">🔑 Alterar Senha</div>
+    <div class="field"><label>Senha Atual</label><input type="password" id="ms-a"/></div>
+    <div class="field"><label>Nova Senha</label><input type="password" id="ms-n"/></div>
+    <div class="field"><label>Confirmar</label><input type="password" id="ms-c"/></div>
+    <button class="btn btn-primary btn-block" onclick="alterarSenhaMot()">Salvar Nova Senha</button>
+  </div>`;
+}
+
+window.salvarConfig=async motId=>{
+  const mot=state.motoristas.find(m=>m.id===motId);if(!mot)return;
+  await fbUpd('motoristas',motId,{config:{meta_diaria:Number($('cfg-dia')?.value||0),meta_semanal:Number($('cfg-sem')?.value||0),meta_mensal:Number($('cfg-mes')?.value||0),aluguel_semanal:Number($('cfg-alg')?.value||0)},nome_ficticio:$('cfg-nick')?.value||''});
+  toast('Configurações salvas! ✅');
+};
+
+window.alterarSenhaMot=async()=>{
+  const a=$('ms-a').value,n=$('ms-n').value,c=$('ms-c').value;
+  if(a!==currentUser.senha)return alert('Senha atual incorreta.');
+  if(n.length<4)return alert('Mínimo 4 caracteres.');
+  if(n!==c)return alert('As senhas não coincidem.');
+  await fbUpd('usuarios',currentUser.id,{senha:n});currentUser.senha=n;
+  toast('Senha alterada! ✅');
+};
+
+// ─── JORNADA ──────────────────────────────────────────────────────────────
+window.iniciarJornada=async(motId,data)=>{
+  const j=(state.jornadas||[]).find(x=>x.data===data&&x.motorista_id===motId);
+  const agora=new Date().toISOString();
+  if(j) await fbUpd('jornadas',j.id,{jornada_ativa:true,jornada_inicio:agora});
+  else await fbAdd('jornadas',{motorista_id:motId,data,jornada_ativa:true,jornada_inicio:agora,horas_segundos:0,bruto:0,km:0,horas:0,gastos:[],receitas:[]});
+  toast('Jornada iniciada! ✅');
+};
+
+window.encerrarJornada=async(motId,data)=>{
+  const j=(state.jornadas||[]).find(x=>x.data===data&&x.motorista_id===motId);if(!j)return;
+  const segs=Math.floor((new Date()-new Date(j.jornada_inicio))/1000);
+  const total=(j.horas_segundos||0)+segs;
+  await fbUpd('jornadas',j.id,{jornada_ativa:false,jornada_inicio:null,horas_segundos:total,horas:parseFloat((total/3600).toFixed(2))});
+  toast('Jornada encerrada! ✅');
+};
+
+window.salvarFaturamento=async(motId,data)=>{
+  const bruto=Number($('mot-bruto')?.value||0),km=Number($('mot-km')?.value||0),horas=Number($('mot-horas')?.value||0);
+  const j=(state.jornadas||[]).find(x=>x.data===data&&x.motorista_id===motId);
+  if(j) await fbUpd('jornadas',j.id,{bruto,km,horas});
+  else await fbAdd('jornadas',{motorista_id:motId,data,bruto,km,horas,horas_segundos:0,jornada_ativa:false,gastos:[],receitas:[]});
+  toast('Faturamento salvo! ✅');
+};
+
+window.abrirModalReceita=(motId,data)=>{
+  openModal('Nova Receita',`
+    <div class="field"><label>Plataforma</label><select id="f-pl"><option>Uber</option><option>99</option><option>InDrive</option><option>Particular</option><option>Outro</option></select></div>
+    <div class="field"><label>Valor Bruto (R$) *</label><input type="number" id="f-rb" step="0.01"/></div>
+    <div class="field"><label>Comissão da Plataforma (%)</label><input type="number" id="f-rc" step="0.1" placeholder="Ex: 25"/></div>
+    <div class="grid2"><div class="field"><label>Gorjeta (R$)</label><input type="number" id="f-rg" step="0.01"/></div><div class="field"><label>Bônus (R$)</label><input type="number" id="f-rbo" step="0.01"/></div></div>
+  `,async()=>{
+    const bruto=Number($('f-rb').value);if(!bruto)return alert('Informe o valor bruto.');
+    const j=(state.jornadas||[]).find(x=>x.data===data&&x.motorista_id===motId);
+    const novaReceita={plataforma:$('f-pl').value,bruto,comissao:Number($('f-rc').value||0),gorjeta:Number($('f-rg').value||0),bonus:Number($('f-rbo').value||0)};
+    if(j){await fbUpd('jornadas',j.id,{receitas:[...(j.receitas||[]),novaReceita]});}
+    else{await fbAdd('jornadas',{motorista_id:motId,data,bruto:0,km:0,horas:0,horas_segundos:0,jornada_ativa:false,gastos:[],receitas:[novaReceita]});}
+    closeModal();toast('Receita adicionada! ✅');
+  });
+};
+
+window.removerReceita=async(motId,data,idx)=>{
+  const j=(state.jornadas||[]).find(x=>x.data===data&&x.motorista_id===motId);if(!j)return;
+  await fbUpd('jornadas',j.id,{receitas:j.receitas.filter((_,i)=>i!==idx)});toast('Removido.');
+};
+
+window.abrirModalGasto=(motId,data)=>{
+  openModal('Adicionar Gasto',`
+    <div class="field"><label>Categoria</label><select id="f-gc">
+      <option>🍔 Alimentação</option><option>⛽ Combustível</option><option>🅿️ Estacionamento</option>
+      <option>🔧 Manutenção</option><option>🛣️ Pedágio</option><option>🚿 Lavagem</option>
+      <option>📱 Internet/Dados</option><option>💊 Saúde</option><option>🛒 Outros</option>
+    </select></div>
+    <div class="field"><label>Valor (R$) *</label><input type="number" id="f-gv" step="0.01"/></div>
+    <div class="field"><label>Descrição</label><input id="f-gd" placeholder="Ex: Almoço, gasolina..."/></div>
+  `,async()=>{
+    const val=Number($('f-gv').value);if(!val)return alert('Informe o valor.');
+    const j=(state.jornadas||[]).find(x=>x.data===data&&x.motorista_id===motId);
+    const g={categoria:$('f-gc').value,valor:val,descricao:$('f-gd').value};
+    if(j){await fbUpd('jornadas',j.id,{gastos:[...(j.gastos||[]),g]});}
+    else{await fbAdd('jornadas',{motorista_id:motId,data,bruto:0,km:0,horas:0,horas_segundos:0,jornada_ativa:false,gastos:[g],receitas:[]});}
+    closeModal();toast('Gasto adicionado! ✅');
+  });
+};
+
+window.removerGasto=async(motId,data,idx)=>{
+  const j=(state.jornadas||[]).find(x=>x.data===data&&x.motorista_id===motId);if(!j)return;
+  await fbUpd('jornadas',j.id,{gastos:j.gastos.filter((_,i)=>i!==idx)});toast('Removido.');
+};
+
+// ─── TIMER ────────────────────────────────────────────────────────────────
+const formatarTempo=s=>{const h=Math.floor(s/3600),m=Math.floor((s%3600)/60),ss=s%60;return`${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}:${String(ss).padStart(2,'0')}`;};
+
+function iniciarTimerDisplay(user){
+  if(jornadaTimer)clearInterval(jornadaTimer);
+  jornadaTimer=setInterval(()=>{
+    const td=$('timer-display');if(!td)return clearInterval(jornadaTimer);
+    const j=(state.jornadas||[]).find(x=>x.data===todayStr()&&x.motorista_id===user.motorista_id);
+    let s=j?.horas_segundos||0;
+    if(j?.jornada_ativa&&j?.jornada_inicio) s+=Math.floor((new Date()-new Date(j.jornada_inicio))/1000);
+    td.textContent=formatarTempo(s);
+  },1000);
+}
+
+inicializarUsuarios();
+</script>
+
+</body>
+</html>
