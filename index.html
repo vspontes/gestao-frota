@@ -551,12 +551,17 @@ function renderMotoristas(){
             </div>
           </div>
           <div style="display:flex;flex-direction:column;gap:6px;flex-shrink:0">
+            ${m.docs?.length>0?`<button class="btn btn-ghost btn-sm btn-docs-mot" data-id="${m.id}">📄 Docs (${m.docs.length})</button>`:''}
             <button class="btn btn-ghost btn-sm btn-edit-mot" data-id="${m.id}">✏️ Editar</button>
             <button class="btn btn-danger btn-sm btn-del-mot" data-id="${m.id}">✕</button>
           </div>
         </div>
       </div>`;
     }).join('')}`;
+  el.querySelectorAll('.btn-docs-mot').forEach(b=>b.addEventListener('click',()=>{
+    const m=state.motoristas.find(x=>x.id===b.dataset.id);
+    if(m)verDocs(JSON.stringify(m.docs||[]));
+  }));
   el.querySelectorAll('.btn-edit-mot').forEach(b=>b.addEventListener('click',()=>editarMotorista(b.dataset.id)));
   el.querySelectorAll('.btn-del-mot').forEach(b=>b.addEventListener('click',()=>delMotorista(b.dataset.id)));
 }
