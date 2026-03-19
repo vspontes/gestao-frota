@@ -280,8 +280,11 @@ async function verificarSessao(){
     if(!found){limparSessao();return false;}
     currentUser=found;salvarSessao(found);
     $('login-screen').classList.add('hidden');
-    if(found.perfil==='motorista')iniciarMotorista(found);
-    else iniciarAdmin(found);
+    // checkFirstLogin bloqueia acesso direto por URL também
+    checkFirstLogin(found,()=>{
+      if(found.perfil==='motorista')iniciarMotorista(found);
+      else iniciarAdmin(found);
+    });
     return true;
   }catch(e){return false;}
 }
@@ -297,8 +300,11 @@ window.doLogin=async()=>{
   currentUser=found;$('login-err').style.display='none';
   if($('lembrar-me')?.checked)salvarSessao(found);
   $('login-screen').classList.add('hidden');
-  if(found.perfil==='motorista')iniciarMotorista(found);
-  else iniciarAdmin(found);
+  // checkFirstLogin antes de entrar — não altera fluxo se mustChangePassword=false
+  checkFirstLogin(found,()=>{
+    if(found.perfil==='motorista')iniciarMotorista(found);
+    else iniciarAdmin(found);
+  });
 };
 window.doLogout=()=>{
   limparSessao();currentUser=null;
@@ -432,6 +438,16 @@ function renderDashboard(){
         ${a.acao?`<button onclick="${a.acao}" style="background:rgba(0,0,0,.1);border:none;border-radius:8px;padding:4px 10px;font-size:12px;font-weight:700;cursor:pointer;color:inherit;flex-shrink:0;margin-left:8px">✓ Resolver</button>`:''}
       </div>`).join('')}
     </div>`:''}
+    ${(()=>{
+      const ai=calcAlertasInteligentes();
+      if(!ai.length)return'';
+      return`<div style="margin-bottom:16px">
+        <div style="font-weight:700;font-size:14px;color:#1e3a5f;margin-bottom:8px">🧠 Alertas Inteligentes (${ai.length})</div>
+        ${ai.map(a=>`<div class="alert-box alert-${a.tipo}" style="justify-content:space-between">
+          <span>${a.msg}</span>
+        </div>`).join('')}
+      </div>`;
+    })()}
     <div class="stats-grid">${stats.map(s=>`<div class="stat-card"><span style="font-size:26px">${s.e}</span><div><div style="font-size:19px;font-weight:700;color:${s.c}">${s.v}</div><div style="font-size:11px;color:#6b7280">${s.l}</div></div></div>`).join('')}</div>
     <h3 style="color:#1e3a5f;margin-bottom:12px">Frota</h3>
     <div class="fleet-grid">${carros.map(c=>{
@@ -591,7 +607,7 @@ window.abrirModalMotorista=()=>{
     if(!nome||!tel)return alert('Nome e telefone obrigatórios.');
     const docs=await processarDocs($('f-docs').files);
     const motId=await fbAdd('motoristas',{nome,cpf:$('f-cpf').value,rg:$('f-rg').value,data_nascimento:$('f-nasc').value,estado_civil:$('f-ecivil').value,telefone:tel,email:$('f-email').value,cnh:$('f-cnh').value,cnh_categoria:$('f-ccat').value,cnh_validade:$('f-cval').value,cnh_primeira:$('f-cprim').value,cnh_pontos:$('f-pts').value||'0',cep:$('f-cep').value,uf:$('f-uf').value,cidade:$('f-cidade').value,bairro:$('f-bairro').value,rua:$('f-rua').value,numero:$('f-numero').value,complemento:$('f-comp').value,obs:$('f-obs').value,docs,config:{aluguel_semanal:0,meta_diaria:0,meta_semanal:0,meta_mensal:0}});
-    await fbAdd('usuarios',{nome,login:tel,telefone:tel,senha:'mgp123',perfil:'motorista',motorista_id:motId,ativo:true});
+    await fbAdd('usuarios',{nome,login:tel,telefone:tel,senha:'mgp123',perfil:'motorista',motorista_id:motId,ativo:true,mustChangePassword:true});
     closeModal();toast('Motorista cadastrado! ✅');
   });
   setTimeout(()=>{$('f-docs')?.addEventListener('change',()=>{$('f-docs-c').textContent=' '+$('f-docs').files.length+' arquivo(s)';});},100);
@@ -865,7 +881,7 @@ window.abrirModalUsuario=()=>{
     closeModal();toast('Usuário criado! ✅');
   });
 };
-window.resetSenha=async id=>{if(confirm('Redefinir senha para mgp123?')){await fbUpd('usuarios',id,{senha:'mgp123'});toast('Senha redefinida! ✅');}};
+window.resetSenha=async id=>{if(confirm('Redefinir senha para mgp123?')){await fbUpd('usuarios',id,{senha:'mgp123',mustChangePassword:true});toast('Senha redefinida! Na próximo acesso será obrigado a trocar. ✅');}};
 window.delUsuario=async id=>{if(confirm('Remover?')){await fbDel('usuarios',id);toast('Removido.');}};
 
 function renderMinhaConta(){
@@ -1316,7 +1332,375 @@ window.remSaida=async(motId,data,idx)=>{
   await fbUpd('jornadas',j.id,{gastos:j.gastos.filter((_,i)=>i!==idx)});toast('Removido.');
 };
 
-// ── TIMER ─────────────────────────────────────────────────────────────────
+// ══════════════════════════════════════════════════════════════════════════
+// FINANCIAL ENGINE — funções auxiliares novas (não alteram as existentes)
+// ══════════════════════════════════════════════════════════════════════════
+
+// Proteção contra divisão por zero e NaN
+const safeDivide=(a,b,fallback=0)=>(!b||isNaN(b)||!isFinite(b))?fallback:Number(a||0)/b;
+const safeNum=(v,fallback=0)=>(isNaN(v)||v===null||v===undefined||!isFinite(v))?fallback:Number(v);
+
+// ── 1. JORNADA ENHANCED ───────────────────────────────────────────────────
+// Retorna objeto novo, não altera calcJ()
+function calcJEnhanced(j, carro){
+  const base=calcJ(j,carro); // chama a existente sem alterar
+  const cfg=carro?.config||{};
+
+  // Custos fixos diários (aluguel rateado)
+  const aluguelSemanal=safeNum(carro?.aluguel_semanal||0);
+  const custoFixoDia=safeDivide(aluguelSemanal,6);
+
+  // Custos variáveis = todos os gastos da jornada
+  const custosVariaveis=safeNum(base.gastos);
+
+  // EBITDA real
+  const ebitda=safeNum(base.bruto)-custoFixoDia-custosVariaveis;
+
+  // Margem
+  const margem=safeDivide(ebitda,base.bruto)*100;
+
+  // ROI da jornada (sobre depreciação)
+  const roiJornada=safeDivide(ebitda,safeNum(base.dep)||1)*100;
+
+  return {
+    ebitda:safeNum(ebitda),
+    margem:safeNum(margem),
+    roiJornada:safeNum(roiJornada),
+    custoFixoDia:safeNum(custoFixoDia),
+    custosVariaveis:safeNum(custosVariaveis),
+    lucroLiquidoReal:safeNum(ebitda),
+  };
+}
+
+// ── 2. TENDÊNCIA ──────────────────────────────────────────────────────────
+// Compara períodos sem alterar nada existente
+function calcTendencia(motoristaId, carro){
+  const jornadas=state.jornadas||[];
+  const hoje=new Date();
+
+  const periodo=(diasAtras,qtd)=>{
+    const fim=new Date(hoje);fim.setDate(hoje.getDate()-diasAtras);
+    const ini=new Date(fim);ini.setDate(fim.getDate()-qtd);
+    return jornadas.filter(j=>{
+      const d=new Date(j.data+'T12:00:00');
+      return j.motorista_id===motoristaId&&d>=ini&&d<=fim;
+    });
+  };
+
+  const somaReceita=arr=>arr.reduce((a,j)=>a+safeNum(j.bruto),0);
+
+  const ultimos7=periodo(0,7);
+  const anteriores7=periodo(7,7);
+  const ultimos30=periodo(0,30);
+  const anteriores30=periodo(30,30);
+
+  const rec7=somaReceita(ultimos7);
+  const recAntes7=somaReceita(anteriores7);
+  const rec30=somaReceita(ultimos30);
+  const recAntes30=somaReceita(anteriores30);
+
+  return {
+    tendencia7d:safeDivide(rec7-recAntes7,recAntes7||1)*100,
+    tendencia30d:safeDivide(rec30-recAntes30,recAntes30||1)*100,
+    receita7d:rec7,
+    receita7dAnterior:recAntes7,
+    receita30d:rec30,
+    receita30dAnterior:recAntes30,
+    diasAtivos7:ultimos7.filter(j=>j.bruto>0).length,
+    diasAtivos30:ultimos30.filter(j=>j.bruto>0).length,
+  };
+}
+
+// ── 3. DRIVER RISK INDICATOR ──────────────────────────────────────────────
+// Risk score 0-100: 0=sem risco, 100=risco máximo
+function calcDriverRisk(motorista){
+  const jornadas=state.jornadas||[];
+  const multas=state.multas||[];
+  const carros=state.carros||[];
+  const carro=carros.find(c=>c.motorista_id===motorista.id);
+
+  let risk=0;
+
+  // Dias sem atividade (últimos 7 dias)
+  const hoje=new Date();
+  const ini7=new Date(hoje);ini7.setDate(hoje.getDate()-7);
+  const jUltimos7=jornadas.filter(j=>{
+    const d=new Date(j.data+'T12:00:00');
+    return j.motorista_id===motorista.id&&d>=ini7&&j.bruto>0;
+  });
+  const diasSemAtividade=7-jUltimos7.length;
+  risk+=Math.min(40,diasSemAtividade*6); // até 40pts por inatividade
+
+  // Queda de receita (vs 7 dias anteriores)
+  const tend=calcTendencia(motorista.id,carro);
+  if(tend.tendencia7d<-20)risk+=20; // queda >20% = +20pts
+  else if(tend.tendencia7d<-10)risk+=10;
+
+  // Multas pendentes
+  const multasPend=multas.filter(m=>m.carro_id===carro?.id&&!m.pago).length;
+  risk+=Math.min(30,multasPend*15); // até 30pts por multas
+
+  // Pontos na CNH
+  const pts=safeNum(motorista.cnh_pontos);
+  if(pts>=30)risk+=10;
+  else if(pts>=20)risk+=5;
+
+  return {
+    riskScore:Math.min(100,Math.round(risk)),
+    nivel:risk>=70?'alto':risk>=40?'medio':'baixo',
+    diasSemAtividade,
+    multasPendentes:multasPend,
+    tendenciaReceita:tend.tendencia7d,
+  };
+}
+
+// ── 4. CAR HEALTH INDICATOR ───────────────────────────────────────────────
+// Health score 0-100: 0=crítico, 100=saudável
+function calcCarHealth(carro){
+  const pagamentos=state.pagamentos||[];
+  const manutencoes=state.manutencoes||[];
+  const jornadas=state.jornadas||[];
+
+  let health=100;
+
+  // ROI: receita vs valor compra
+  const recTotal=pagamentos.filter(p=>p.carro_id===carro.id).reduce((a,p)=>a+safeNum(p.valor),0);
+  const compra=safeNum(carro.valor_compra);
+  const roi=safeDivide(recTotal,compra)*100;
+  if(roi<5)health-=20;
+  else if(roi<10)health-=10;
+
+  // Ocupação: tem motorista?
+  if(!carro.motorista_id)health-=30;
+
+  // Atividade financeira (últimos 30 dias)
+  const hoje=new Date();
+  const ini30=new Date(hoje);ini30.setDate(hoje.getDate()-30);
+  const mot=state.motoristas?.find(m=>m.id===carro.motorista_id);
+  const jAtivos=mot?jornadas.filter(j=>{
+    const d=new Date(j.data+'T12:00:00');
+    return j.motorista_id===mot.id&&d>=ini30&&j.bruto>0;
+  }).length:0;
+  if(jAtivos===0)health-=25;
+  else if(jAtivos<5)health-=10;
+
+  // Manutenções pendentes
+  const manPend=manutencoes.filter(m=>m.carro_id===carro.id&&!m.ok).length;
+  health-=Math.min(25,manPend*8);
+
+  return {
+    healthScore:Math.max(0,Math.round(health)),
+    nivel:health>=70?'saudavel':health>=40?'atencao':'critico',
+    roi:safeNum(roi),
+    ocupado:!!carro.motorista_id,
+    diasAtivos30:jAtivos,
+    manutencoesPendentes:manPend,
+  };
+}
+
+// ── 5. OCUPAÇÃO PRECISA ───────────────────────────────────────────────────
+function calcOcupacaoFrota(){
+  const carros=state.carros||[];
+  const jornadas=state.jornadas||[];
+  const hoje=new Date();
+  const ini30=new Date(hoje);ini30.setDate(hoje.getDate()-30);
+
+  return carros.map(c=>{
+    const mot=state.motoristas?.find(m=>m.id===c.motorista_id);
+    const temMotorista=!!c.motorista_id;
+    const jAtivos=mot?jornadas.filter(j=>{
+      const d=new Date(j.data+'T12:00:00');
+      return j.motorista_id===mot.id&&d>=ini30&&safeNum(j.bruto)>0;
+    }).length:0;
+
+    return {
+      id:c.id,
+      modelo:c.modelo,
+      placa:c.placa,
+      comMotorista:temMotorista,
+      comAtividade:jAtivos>0,
+      ocioso:!temMotorista||jAtivos===0,
+      diasAtivos30:jAtivos,
+      status:!temMotorista?'sem_motorista':jAtivos===0?'inativo':'ativo',
+    };
+  });
+}
+
+// ── 6. ALERTAS INTELIGENTES ───────────────────────────────────────────────
+function calcAlertasInteligentes(){
+  const alertas=[];
+  const carros=state.carros||[];
+  const motoristas=state.motoristas||[];
+  const pagamentos=state.pagamentos||[];
+  const jornadas=state.jornadas||[];
+  const hoje=new Date();
+
+  const fmtDia=d=>new Date(d+'T12:00:00').toLocaleDateString('pt-BR');
+  const diasStr=n=>n>=14?`há ${Math.round(n/7)} semanas`:`há ${n} dia${n!==1?'s':''}`;
+
+  motoristas.forEach(m=>{
+    const risk=calcDriverRisk(m);
+
+    // Inatividade — com data do último lançamento
+    if(risk.diasSemAtividade>=2){
+      const ultimaJ=jornadas
+        .filter(j=>j.motorista_id===m.id&&safeNum(j.bruto)>0)
+        .sort((a,b)=>new Date(b.data)-new Date(a.data))[0];
+      const desde=ultimaJ?` (desde ${fmtDia(ultimaJ.data)})`:'';
+      const tipo=risk.diasSemAtividade>3?'red':'yellow';
+      alertas.push({tipo,msg:`⚠️ ${m.nome} sem atividade ${diasStr(risk.diasSemAtividade)}${desde}.`,acao:null});
+    }
+
+    // Queda de receita — com período de referência
+    if(risk.tendenciaReceita<-20){
+      const refIni=new Date(hoje);refIni.setDate(hoje.getDate()-14);
+      const desde=` (desde ${refIni.toLocaleDateString('pt-BR')})`;
+      alertas.push({tipo:'red',msg:`📉 ${m.nome} com queda de ${Math.abs(risk.tendenciaReceita).toFixed(0)}% na receita ${diasStr(14)}${desde}.`,acao:null});
+    } else if(risk.tendenciaReceita<-10){
+      alertas.push({tipo:'yellow',msg:`📉 ${m.nome} com queda de ${Math.abs(risk.tendenciaReceita).toFixed(0)}% na receita vs semana anterior.`,acao:null});
+    }
+  });
+
+  carros.forEach(c=>{
+    const health=calcCarHealth(c);
+    const mot=motoristas.find(m=>m.id===c.motorista_id);
+
+    // ROI negativo — com período desde primeiro pagamento
+    if(health.roi<0){
+      const primPag=pagamentos
+        .filter(p=>p.carro_id===c.id)
+        .sort((a,b)=>new Date(a.data)-new Date(b.data))[0];
+      const desde=primPag?` (desde ${fmtDia(primPag.data)})`:'';
+      alertas.push({tipo:'red',msg:`🚗 ${c.modelo} ${c.placa} com ROI negativo${desde}.`,acao:null});
+    }
+
+    // Carro parado — com data da última atividade
+    if(health.ocioso&&c.motorista_id&&mot){
+      const ultimaJ=jornadas
+        .filter(j=>j.motorista_id===mot.id&&safeNum(j.bruto)>0)
+        .sort((a,b)=>new Date(b.data)-new Date(a.data))[0];
+      const diasParado=ultimaJ
+        ?Math.floor((hoje-new Date(ultimaJ.data+'T12:00:00'))/(1000*60*60*24))
+        :30;
+      const desde=ultimaJ?` (desde ${fmtDia(ultimaJ.data)})`:'';
+      const tipo=diasParado>3?'red':'yellow';
+      alertas.push({tipo,msg:`😴 ${c.modelo} ${c.placa} parado ${diasStr(diasParado)}${desde}.`,acao:null});
+    }
+
+    // Sem motorista
+    if(!c.motorista_id){
+      alertas.push({tipo:'yellow',msg:`🚗 ${c.modelo} ${c.placa} sem motorista vinculado.`,acao:null});
+    }
+  });
+
+  return alertas;
+}
+
+// ── 7. RECEITA PREVISTA vs RECEBIDA + INADIMPLÊNCIA ──────────────────────
+function calcInadimplencia(){
+  const carros=state.carros||[];
+  const pagamentos=state.pagamentos||[];
+  const motoristas=state.motoristas||[];
+
+  return carros.filter(c=>c.motorista_id).map(c=>{
+    const mot=motoristas.find(m=>m.id===c.motorista_id);
+    const cfg=mot?.config||{};
+    const alugSemanal=safeNum(cfg.aluguel_semanal);
+
+    // Semanas desde o início (usa primeiro pagamento como referência)
+    const pags=pagamentos.filter(p=>p.carro_id===c.id);
+    const totalRecebido=pags.reduce((a,p)=>a+safeNum(p.valor),0);
+
+    // Receita prevista: aluguel * semanas ativas
+    const primeiroFmt=pags.sort((a,b)=>new Date(a.data)-new Date(b.data))[0];
+    const semanas=primeiroFmt?
+      Math.ceil((new Date()-new Date(primeiroFmt.data+'T12:00:00'))/(7*24*60*60*1000)):0;
+    const previsto=alugSemanal*semanas;
+    const deficit=Math.max(0,previsto-totalRecebido);
+    const inadimplente=deficit>alugSemanal; // deve mais de 1 semana
+
+    return {
+      carro_id:c.id,
+      modelo:c.modelo,
+      placa:c.placa,
+      motorista:mot?.nome||'—',
+      previsto:safeNum(previsto),
+      recebido:safeNum(totalRecebido),
+      deficit:safeNum(deficit),
+      inadimplente,
+      semanas,
+    };
+  });
+}
+
+// ── FIRST LOGIN CHECK ─────────────────────────────────────────────────────
+function checkFirstLogin(user, onSuccess){
+  if(!user.mustChangePassword){ onSuccess(); return; }
+
+  // Remove modal existente se houver
+  $('modal-overlay')?.remove();
+
+  const d=document.createElement('div');
+  d.id='modal-overlay';
+  d.className='modal-overlay';
+  // Sem fechar ao clicar fora
+  d.onclick=e=>e.stopPropagation();
+  d.innerHTML=`<div class="modal-box" style="max-width:400px">
+    <div class="modal-header" style="border-bottom:1px solid #e5e7eb;padding-bottom:12px;margin-bottom:16px">
+      <h3 style="color:#1e3a5f">🔐 Troca de Senha Obrigatória</h3>
+      <!-- sem botão fechar -->
+    </div>
+    <div style="background:#fffbeb;border:1px solid #fde68a;border-radius:8px;padding:12px;margin-bottom:16px;font-size:13px;color:#d97706">
+      Por segurança, altere sua senha no primeiro acesso.<br>A nova senha deve ser diferente de <b>mgp123</b> e ter no mínimo 6 caracteres.
+    </div>
+    <div class="field"><label>Nova Senha</label><input type="password" id="fl-nova" placeholder="Mínimo 6 caracteres"/></div>
+    <div class="field"><label>Confirmar Nova Senha</label><input type="password" id="fl-conf" placeholder="Repita a senha"/></div>
+    <p id="fl-err" style="color:#ef4444;font-size:13px;margin-bottom:10px;display:none"></p>
+    <button class="btn btn-primary btn-block" onclick="confirmarPrimeiraSenha('${user.id}','${user.senha}')" style="padding:12px;font-size:15px">Salvar e Continuar</button>
+  </div>`;
+
+  // Bloqueia ESC
+  document.addEventListener('keydown', bloquearESC);
+  document.body.appendChild(d);
+
+  // Guarda callback para usar após troca
+  window._firstLoginCallback=onSuccess;
+}
+
+function bloquearESC(e){
+  if(e.key==='Escape') e.preventDefault();
+}
+
+window.confirmarPrimeiraSenha=async(userId, senhaAtual)=>{
+  const nova=$('fl-nova').value;
+  const conf=$('fl-conf').value;
+  const err=$('fl-err');
+  err.style.display='none';
+
+  if(nova.length<6){
+    err.textContent='⚠️ A senha deve ter no mínimo 6 caracteres.';
+    err.style.display='block';return;
+  }
+  if(nova===senhaAtual||nova==='mgp123'){
+    err.textContent='⚠️ A nova senha não pode ser igual à senha atual.';
+    err.style.display='block';return;
+  }
+  if(nova!==conf){
+    err.textContent='⚠️ As senhas não coincidem.';
+    err.style.display='block';return;
+  }
+
+  await fbUpd('usuarios',userId,{senha:nova,mustChangePassword:false});
+  currentUser.senha=nova;
+  currentUser.mustChangePassword=false;
+  if(currentUser.perfil!=='motorista') salvarSessao(currentUser);
+
+  document.removeEventListener('keydown',bloquearESC);
+  $('modal-overlay')?.remove();
+  toast('Senha alterada com sucesso! ✅');
+
+  if(window._firstLoginCallback){ window._firstLoginCallback(); window._firstLoginCallback=null; }
+};
 const fmtTempo=s=>{const h=Math.floor(s/3600),m=Math.floor((s%3600)/60),ss=s%60;return`${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}:${String(ss).padStart(2,'0')}`;};
 function startTimer(user){
   if(jornadaTimer)clearInterval(jornadaTimer);
