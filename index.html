@@ -1374,39 +1374,33 @@ function calcJEnhanced(j, carro){
 
 // ── 2. TENDÊNCIA ──────────────────────────────────────────────────────────
 function calcTendencia(motoristaId,carro){
+  // Fallback seguro se dados ausentes
+  const _safe={tendencia7d:0,tendencia30d:0,receita7d:0,receita7dAnterior:0,receita30d:0,receita30dAnterior:0,diasAtivos7:0,diasAtivos30:0};
+  if(!motoristaId)return _safe;
+
   const jornadas=state.jornadas||[];
-  const hoje=getTodayLocal(); // ← local, não UTC
+  const hoje=getTodayLocal();
 
   const periodo=(diasAtras,qtd)=>{
     const fimStr=subtractDays(hoje,diasAtras);
     const iniStr=subtractDays(fimStr,qtd);
     return jornadas.filter(j=>{
-      if(j.motorista_id!==motoristaId)return false;
-      const diff1=daysBetween(iniStr,j.data); // j.data >= ini
-      const diff2=daysBetween(j.data,fimStr); // j.data <= fim
-      return diff1>=0&&diff2>=0;
+      if(!j||j.motorista_id!==motoristaId)return false;
+      return daysBetween(iniStr,j.data)>=0&&daysBetween(j.data,fimStr)>=0;
     });
   };
 
   const somaReceita=arr=>arr.reduce((a,j)=>a+safeNum(j.bruto),0);
+  const ultimos7=periodo(0,7),anteriores7=periodo(7,7);
+  const ultimos30=periodo(0,30),anteriores30=periodo(30,30);
+  const rec7=somaReceita(ultimos7),recAntes7=somaReceita(anteriores7);
+  const rec30=somaReceita(ultimos30),recAntes30=somaReceita(anteriores30);
 
-  const ultimos7=periodo(0,7);
-  const anteriores7=periodo(7,7);
-  const ultimos30=periodo(0,30);
-  const anteriores30=periodo(30,30);
-
-  const rec7=somaReceita(ultimos7);
-  const recAntes7=somaReceita(anteriores7);
-  const rec30=somaReceita(ultimos30);
-  const recAntes30=somaReceita(anteriores30);
-
-  return {
+  return{
     tendencia7d:safeDivide(rec7-recAntes7,recAntes7||1)*100,
     tendencia30d:safeDivide(rec30-recAntes30,recAntes30||1)*100,
-    receita7d:rec7,
-    receita7dAnterior:recAntes7,
-    receita30d:rec30,
-    receita30dAnterior:recAntes30,
+    receita7d:rec7,receita7dAnterior:recAntes7,
+    receita30d:rec30,receita30dAnterior:recAntes30,
     diasAtivos7:ultimos7.filter(j=>j.bruto>0).length,
     diasAtivos30:ultimos30.filter(j=>j.bruto>0).length,
   };
@@ -1414,19 +1408,21 @@ function calcTendencia(motoristaId,carro){
 
 // ── 3. DRIVER RISK INDICATOR ──────────────────────────────────────────────
 function calcDriverRisk(motorista){
+  // Fallback seguro
+  const _safe={riskScore:0,nivel:'baixo',diasSemAtividade:0,multasPendentes:0,tendenciaReceita:0};
+  if(!motorista||!motorista.id)return _safe;
+
   const jornadas=state.jornadas||[];
   const multas=state.multas||[];
   const carros=state.carros||[];
   const carro=carros.find(c=>c.motorista_id===motorista.id);
-  const hoje=getTodayLocal(); // ← local, não UTC
-  const ini7=subtractDays(hoje,7);
+  const hoje=getTodayLocal();
 
   let risk=0;
 
-  // Dias sem atividade (últimos 7 dias) — usando daysBetween
   const jUltimos7=jornadas.filter(j=>{
-    if(j.motorista_id!==motorista.id||!j.bruto)return false;
-    return daysBetween(j.data,hoje)<=7; // j.data dentro dos últimos 7 dias
+    if(!j||j.motorista_id!==motorista.id||!safeNum(j.bruto))return false;
+    return daysBetween(j.data,hoje)<=7;
   });
   const diasSemAtividade=Math.max(0,7-jUltimos7.length);
   risk+=Math.min(40,diasSemAtividade*6);
@@ -1435,52 +1431,55 @@ function calcDriverRisk(motorista){
   if(tend.tendencia7d<-20)risk+=20;
   else if(tend.tendencia7d<-10)risk+=10;
 
-  const multasPend=multas.filter(m=>m.carro_id===carro?.id&&!m.pago).length;
+  const multasPend=(multas||[]).filter(m=>m&&m.carro_id===carro?.id&&!m.pago).length;
   risk+=Math.min(30,multasPend*15);
 
   const pts=safeNum(motorista.cnh_pontos);
   if(pts>=30)risk+=10;
   else if(pts>=20)risk+=5;
 
-  return {
-    riskScore:Math.min(100,Math.round(risk)),
-    nivel:risk>=70?'alto':risk>=40?'medio':'baixo',
-    diasSemAtividade,
-    multasPendentes:multasPend,
-    tendenciaReceita:tend.tendencia7d,
-  };
+  return{riskScore:Math.min(100,Math.round(risk)),nivel:risk>=70?'alto':risk>=40?'medio':'baixo',diasSemAtividade,multasPendentes:multasPend,tendenciaReceita:safeNum(tend.tendencia7d)};
 }
 
 // ── 4. CAR HEALTH INDICATOR ───────────────────────────────────────────────
 function calcCarHealth(carro){
+  // Fallback seguro
+  const _safe={healthScore:50,nivel:'atencao',roi:0,ocupado:false,diasAtivos30:0,manutencoesPendentes:0};
+  if(!carro||!carro.id)return _safe;
+
   const pagamentos=state.pagamentos||[];
   const manutencoes=state.manutencoes||[];
   const jornadas=state.jornadas||[];
-  const hoje=getTodayLocal(); // ← local, não UTC
+  const hoje=getTodayLocal();
   const ini30=subtractDays(hoje,30);
 
   let health=100;
 
-  const recTotal=pagamentos.filter(p=>p.carro_id===carro.id).reduce((a,p)=>a+safeNum(p.valor),0);
+  const recTotal=pagamentos
+    .filter(p=>p&&p.carro_id===carro.id)
+    .reduce((a,p)=>a+safeNum(p.valor),0);
   const compra=safeNum(carro.valor_compra);
-  const roi=safeDivide(recTotal,compra)*100;
-  if(roi<5)health-=20;
-  else if(roi<10)health-=10;
+  // ROI só calcula se houver valor de compra cadastrado
+  const roi=compra>0?safeDivide(recTotal,compra)*100:0;
+  if(compra>0){
+    if(roi<5)health-=20;
+    else if(roi<10)health-=10;
+  }
 
   if(!carro.motorista_id)health-=30;
 
-  const mot=state.motoristas?.find(m=>m.id===carro.motorista_id);
+  const mot=(state.motoristas||[]).find(m=>m&&m.id===carro.motorista_id);
   const jAtivos=mot?jornadas.filter(j=>{
-    if(j.motorista_id!==mot.id||!j.bruto)return false;
+    if(!j||j.motorista_id!==mot.id||!safeNum(j.bruto))return false;
     return daysBetween(ini30,j.data)>=0&&daysBetween(j.data,hoje)>=0;
   }).length:0;
   if(jAtivos===0)health-=25;
   else if(jAtivos<5)health-=10;
 
-  const manPend=manutencoes.filter(m=>m.carro_id===carro.id&&!m.ok).length;
+  const manPend=manutencoes.filter(m=>m&&m.carro_id===carro.id&&!m.ok).length;
   health-=Math.min(25,manPend*8);
 
-  return {
+  return{
     healthScore:Math.max(0,Math.round(health)),
     nivel:health>=70?'saudavel':health>=40?'atencao':'critico',
     roi:safeNum(roi),
@@ -1655,155 +1654,102 @@ function calcInadimplencia(){
 
 // Gera string YYYY-MM-DD para início da semana (segunda-feira) de uma data
 function getWeekStart(dateStr){
-  const d=parseLocalDate(dateStr);
-  const day=d.getDay(); // 0=dom, 1=seg...
-  const diff=day===0?-6:1-day; // ajusta para segunda
-  d.setDate(d.getDate()+diff);
-  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+  try{
+    const d=parseLocalDate(dateStr);
+    if(!d)return dateStr;
+    const day=d.getDay();
+    const diff=day===0?-6:1-day;
+    d.setDate(d.getDate()+diff);
+    return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+  }catch(e){return dateStr;}
 }
 
 // Adiciona N dias a uma string YYYY-MM-DD
 function addDays(dateStr,n){
-  const d=parseLocalDate(dateStr);
-  d.setDate(d.getDate()+n);
-  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+  try{
+    const d=parseLocalDate(dateStr);
+    if(!d)return dateStr;
+    d.setDate(d.getDate()+n);
+    return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+  }catch(e){return dateStr;}
 }
 
-// Gera calendário de semanas desde início até hoje
-// weeklyRent: valor semanal do aluguel
-// startDate: YYYY-MM-DD data de início do vínculo
-function buildWeeklySchedule(weeklyRent, startDate){
-  const hoje=getTodayLocal();
-  const rent=safeNum(weeklyRent);
-  if(!rent||!startDate)return[];
+// Gera calendário de semanas — retorna [] se dados inválidos
+function buildWeeklySchedule(weeklyRent,startDate){
+  try{
+    const hoje=getTodayLocal();
+    const rent=safeNum(weeklyRent);
+    if(!rent||!startDate)return[];
+    const semanas=[];
+    let cur=getWeekStart(startDate);
+    let safety=0;
+    while(daysBetween(cur,hoje)>=0&&safety<104){
+      const end=addDays(cur,6);
+      semanas.push({weekStart:cur,weekEnd:end,amountDue:rent,amountPaid:0,balance:rent,status:'open'});
+      cur=addDays(cur,7);safety++;
+    }
+    return semanas;
+  }catch(e){return[];}
+}
 
-  const semanas=[];
-  let cur=getWeekStart(startDate);
-
-  // Gera até semana atual + 1 futura (para crédito)
-  let safety=0;
-  while(daysBetween(cur,hoje)>=0&&safety<104){ // max 2 anos
-    const end=addDays(cur,6);
-    semanas.push({
-      weekStart:cur,
-      weekEnd:end,
-      amountDue:rent,
-      amountPaid:0,
-      balance:rent,
-      status:'open',
+// Distribui pagamentos FIFO — retorna schedule original se erro
+function applyPaymentToRent(schedule,pagamentos){
+  try{
+    if(!schedule.length||!pagamentos.length)return schedule;
+    const pags=[...pagamentos].sort((a,b)=>a.data<b.data?-1:1);
+    const result=schedule.map(s=>({...s,amountPaid:0,balance:s.amountDue,status:'open'}));
+    let credito=0;
+    pags.forEach(p=>{
+      let restante=safeNum(p.valor)+credito;credito=0;
+      for(let i=0;i<result.length;i++){
+        if(restante<=0)break;
+        const s=result[i];
+        if(s.status==='paid')continue;
+        const falta=s.amountDue-s.amountPaid;
+        if(falta<=0){s.status='paid';continue;}
+        if(restante>=falta){s.amountPaid+=falta;s.balance=0;s.status='paid';restante-=falta;}
+        else{s.amountPaid+=restante;s.balance=s.amountDue-s.amountPaid;s.status='partial';restante=0;}
+      }
+      if(restante>0)credito+=restante;
     });
-    cur=addDays(cur,7);
-    safety++;
-  }
-  return semanas;
-}
-
-// Distribui pagamentos FIFO nas semanas mais antigas primeiro
-// Retorna schedule atualizado com amountPaid, balance e status por semana
-function applyPaymentToRent(schedule, pagamentos){
-  if(!schedule.length||!pagamentos.length)return schedule;
-
-  // Ordena pagamentos por data (mais antigo primeiro — FIFO)
-  const pags=[...pagamentos].sort((a,b)=>a.data<b.data?-1:1);
-
-  // Copia schedule para não mutar o original
-  const result=schedule.map(s=>({...s,amountPaid:0,balance:s.amountDue,status:'open'}));
-
-  // Pool de crédito para excedentes
-  let credito=0;
-
-  pags.forEach(p=>{
-    let restante=safeNum(p.valor)+credito;
-    credito=0;
-
-    for(let i=0;i<result.length;i++){
-      if(restante<=0)break;
-      const semana=result[i];
-      if(semana.status==='paid')continue;
-
-      const falta=semana.amountDue-semana.amountPaid;
-      if(falta<=0){semana.status='paid';continue;}
-
-      if(restante>=falta){
-        semana.amountPaid+=falta;
-        semana.balance=0;
-        semana.status='paid';
-        restante-=falta;
-      } else {
-        semana.amountPaid+=restante;
-        semana.balance=semana.amountDue-semana.amountPaid;
-        semana.status='partial';
-        restante=0;
-      }
-    }
-
-    // Excedente vira crédito
-    if(restante>0)credito+=restante;
-  });
-
-  // Aplica crédito remanescente (se houver)
-  if(credito>0){
-    for(let i=0;i<result.length;i++){
-      if(result[i].status!=='paid'&&result[i].balance>0){
-        const falta=result[i].balance;
-        if(credito>=falta){
-          result[i].amountPaid+=falta;
-          result[i].balance=0;
-          result[i].status='paid';
-          credito-=falta;
-        } else {
-          result[i].amountPaid+=credito;
-          result[i].balance=result[i].amountDue-result[i].amountPaid;
-          result[i].status='partial';
-          credito=0;
+    if(credito>0){
+      for(let i=0;i<result.length;i++){
+        if(result[i].status!=='paid'&&result[i].balance>0){
+          const falta=result[i].balance;
+          if(credito>=falta){result[i].amountPaid+=falta;result[i].balance=0;result[i].status='paid';credito-=falta;}
+          else{result[i].amountPaid+=credito;result[i].balance=result[i].amountDue-result[i].amountPaid;result[i].status='partial';credito=0;}
+          break;
         }
-        break;
       }
     }
-  }
-
-  return result;
+    return result;
+  }catch(e){return schedule;}
 }
 
-// Função principal: retorna balanço completo de um veículo
+// calcRentBalance — sempre retorna objeto seguro, nunca lança exceção
 function calcRentBalance(carroId){
-  const carro=state.carros.find(c=>c.id===carroId);
-  if(!carro||!carro.motorista_id)return null;
-
-  const mot=state.motoristas.find(m=>m.id===carro.motorista_id);
-  if(!mot)return null;
-
-  const cfg=mot.config||{};
-  const weeklyRent=safeNum(cfg.aluguel_semanal);
-  if(!weeklyRent)return null;
-
-  // Data de início = primeiro pagamento ou data de hoje - 4 semanas
-  const pags=(state.pagamentos||[]).filter(p=>p.carro_id===carroId&&p.data);
-  const startDate=pags.length
-    ?pags.sort((a,b)=>a.data<b.data?-1:1)[0].data
-    :subtractDays(getTodayLocal(),28);
-
-  const schedule=buildWeeklySchedule(weeklyRent,startDate);
-  const scheduleComPags=applyPaymentToRent(schedule,pags);
-
-  const totalDue=scheduleComPags.reduce((a,s)=>a+s.amountDue,0);
-  const totalPaid=scheduleComPags.reduce((a,s)=>a+s.amountPaid,0);
-  const totalPending=Math.max(0,totalDue-totalPaid);
-  const semanasAbertas=scheduleComPags.filter(s=>s.status!=='paid');
-  const semanasAtrasadas=semanasAbertas.filter(s=>daysBetween(s.weekEnd,getTodayLocal())>0);
-
-  return {
-    carroId,
-    motorista:mot.nome,
-    weeklyRent,
-    totalDue:safeNum(totalDue),
-    totalPaid:safeNum(totalPaid),
-    totalPending:safeNum(totalPending),
-    semanasTotal:scheduleComPags.length,
-    semanasAbertas:semanasAbertas.length,
-    semanasAtrasadas:semanasAtrasadas.length,
-    schedule:scheduleComPags,
-  };
+  const _safe={carroId,motorista:'—',weeklyRent:0,totalDue:0,totalPaid:0,totalPending:0,semanasTotal:0,semanasAbertas:0,semanasAtrasadas:0,schedule:[]};
+  try{
+    const carro=(state.carros||[]).find(c=>c.id===carroId);
+    if(!carro||!carro.motorista_id)return _safe;
+    const mot=(state.motoristas||[]).find(m=>m.id===carro.motorista_id);
+    if(!mot)return _safe;
+    const cfg=mot.config||{};
+    const weeklyRent=safeNum(cfg.aluguel_semanal);
+    if(!weeklyRent)return{..._safe,motorista:mot.nome};
+    const pags=(state.pagamentos||[]).filter(p=>p.carro_id===carroId&&p.data);
+    const startDate=pags.length
+      ?pags.sort((a,b)=>a.data<b.data?-1:1)[0].data
+      :subtractDays(getTodayLocal(),28);
+    const schedule=buildWeeklySchedule(weeklyRent,startDate);
+    const sc=applyPaymentToRent(schedule,pags);
+    const totalDue=sc.reduce((a,s)=>a+s.amountDue,0);
+    const totalPaid=sc.reduce((a,s)=>a+s.amountPaid,0);
+    const totalPending=Math.max(0,totalDue-totalPaid);
+    const abertas=sc.filter(s=>s.status!=='paid');
+    const atrasadas=abertas.filter(s=>daysBetween(s.weekEnd,getTodayLocal())>0);
+    return{carroId,motorista:mot.nome,weeklyRent,totalDue:safeNum(totalDue),totalPaid:safeNum(totalPaid),totalPending:safeNum(totalPending),semanasTotal:sc.length,semanasAbertas:abertas.length,semanasAtrasadas:atrasadas.length,schedule:sc};
+  }catch(e){return _safe;}
 }
 function checkFirstLogin(user, onSuccess){
   if(!user.mustChangePassword){ onSuccess(); return; }
