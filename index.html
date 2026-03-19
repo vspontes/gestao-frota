@@ -1373,17 +1373,18 @@ function calcJEnhanced(j, carro){
 }
 
 // ── 2. TENDÊNCIA ──────────────────────────────────────────────────────────
-// Compara períodos sem alterar nada existente
-function calcTendencia(motoristaId, carro){
+function calcTendencia(motoristaId,carro){
   const jornadas=state.jornadas||[];
-  const hoje=new Date();
+  const hoje=getTodayLocal(); // ← local, não UTC
 
   const periodo=(diasAtras,qtd)=>{
-    const fim=new Date(hoje);fim.setDate(hoje.getDate()-diasAtras);
-    const ini=new Date(fim);ini.setDate(fim.getDate()-qtd);
+    const fimStr=subtractDays(hoje,diasAtras);
+    const iniStr=subtractDays(fimStr,qtd);
     return jornadas.filter(j=>{
-      const d=new Date(j.data+'T12:00:00');
-      return j.motorista_id===motoristaId&&d>=ini&&d<=fim;
+      if(j.motorista_id!==motoristaId)return false;
+      const diff1=daysBetween(iniStr,j.data); // j.data >= ini
+      const diff2=daysBetween(j.data,fimStr); // j.data <= fim
+      return diff1>=0&&diff2>=0;
     });
   };
 
@@ -1412,35 +1413,31 @@ function calcTendencia(motoristaId, carro){
 }
 
 // ── 3. DRIVER RISK INDICATOR ──────────────────────────────────────────────
-// Risk score 0-100: 0=sem risco, 100=risco máximo
 function calcDriverRisk(motorista){
   const jornadas=state.jornadas||[];
   const multas=state.multas||[];
   const carros=state.carros||[];
   const carro=carros.find(c=>c.motorista_id===motorista.id);
+  const hoje=getTodayLocal(); // ← local, não UTC
+  const ini7=subtractDays(hoje,7);
 
   let risk=0;
 
-  // Dias sem atividade (últimos 7 dias)
-  const hoje=new Date();
-  const ini7=new Date(hoje);ini7.setDate(hoje.getDate()-7);
+  // Dias sem atividade (últimos 7 dias) — usando daysBetween
   const jUltimos7=jornadas.filter(j=>{
-    const d=new Date(j.data+'T12:00:00');
-    return j.motorista_id===motorista.id&&d>=ini7&&j.bruto>0;
+    if(j.motorista_id!==motorista.id||!j.bruto)return false;
+    return daysBetween(j.data,hoje)<=7; // j.data dentro dos últimos 7 dias
   });
-  const diasSemAtividade=7-jUltimos7.length;
-  risk+=Math.min(40,diasSemAtividade*6); // até 40pts por inatividade
+  const diasSemAtividade=Math.max(0,7-jUltimos7.length);
+  risk+=Math.min(40,diasSemAtividade*6);
 
-  // Queda de receita (vs 7 dias anteriores)
   const tend=calcTendencia(motorista.id,carro);
-  if(tend.tendencia7d<-20)risk+=20; // queda >20% = +20pts
+  if(tend.tendencia7d<-20)risk+=20;
   else if(tend.tendencia7d<-10)risk+=10;
 
-  // Multas pendentes
   const multasPend=multas.filter(m=>m.carro_id===carro?.id&&!m.pago).length;
-  risk+=Math.min(30,multasPend*15); // até 30pts por multas
+  risk+=Math.min(30,multasPend*15);
 
-  // Pontos na CNH
   const pts=safeNum(motorista.cnh_pontos);
   if(pts>=30)risk+=10;
   else if(pts>=20)risk+=5;
@@ -1455,36 +1452,31 @@ function calcDriverRisk(motorista){
 }
 
 // ── 4. CAR HEALTH INDICATOR ───────────────────────────────────────────────
-// Health score 0-100: 0=crítico, 100=saudável
 function calcCarHealth(carro){
   const pagamentos=state.pagamentos||[];
   const manutencoes=state.manutencoes||[];
   const jornadas=state.jornadas||[];
+  const hoje=getTodayLocal(); // ← local, não UTC
+  const ini30=subtractDays(hoje,30);
 
   let health=100;
 
-  // ROI: receita vs valor compra
   const recTotal=pagamentos.filter(p=>p.carro_id===carro.id).reduce((a,p)=>a+safeNum(p.valor),0);
   const compra=safeNum(carro.valor_compra);
   const roi=safeDivide(recTotal,compra)*100;
   if(roi<5)health-=20;
   else if(roi<10)health-=10;
 
-  // Ocupação: tem motorista?
   if(!carro.motorista_id)health-=30;
 
-  // Atividade financeira (últimos 30 dias)
-  const hoje=new Date();
-  const ini30=new Date(hoje);ini30.setDate(hoje.getDate()-30);
   const mot=state.motoristas?.find(m=>m.id===carro.motorista_id);
   const jAtivos=mot?jornadas.filter(j=>{
-    const d=new Date(j.data+'T12:00:00');
-    return j.motorista_id===mot.id&&d>=ini30&&j.bruto>0;
+    if(j.motorista_id!==mot.id||!j.bruto)return false;
+    return daysBetween(ini30,j.data)>=0&&daysBetween(j.data,hoje)>=0;
   }).length:0;
   if(jAtivos===0)health-=25;
   else if(jAtivos<5)health-=10;
 
-  // Manutenções pendentes
   const manPend=manutencoes.filter(m=>m.carro_id===carro.id&&!m.ok).length;
   health-=Math.min(25,manPend*8);
 
@@ -1502,21 +1494,19 @@ function calcCarHealth(carro){
 function calcOcupacaoFrota(){
   const carros=state.carros||[];
   const jornadas=state.jornadas||[];
-  const hoje=new Date();
-  const ini30=new Date(hoje);ini30.setDate(hoje.getDate()-30);
+  const hoje=getTodayLocal(); // ← local, não UTC
+  const ini30=subtractDays(hoje,30);
 
   return carros.map(c=>{
     const mot=state.motoristas?.find(m=>m.id===c.motorista_id);
     const temMotorista=!!c.motorista_id;
     const jAtivos=mot?jornadas.filter(j=>{
-      const d=new Date(j.data+'T12:00:00');
-      return j.motorista_id===mot.id&&d>=ini30&&safeNum(j.bruto)>0;
+      if(j.motorista_id!==mot.id||!j.bruto)return false;
+      return daysBetween(ini30,j.data)>=0&&daysBetween(j.data,hoje)>=0;
     }).length:0;
 
     return {
-      id:c.id,
-      modelo:c.modelo,
-      placa:c.placa,
+      id:c.id,modelo:c.modelo,placa:c.placa,
       comMotorista:temMotorista,
       comAtividade:jAtivos>0,
       ocioso:!temMotorista||jAtivos===0,
@@ -1532,32 +1522,63 @@ function calcAlertasInteligentes(){
   const carros=state.carros||[];
   const motoristas=state.motoristas||[];
   const pagamentos=state.pagamentos||[];
-  const jornadas=state.jornadas||[];
-  const hoje=new Date();
+  const manutencoes=state.manutencoes||[];
+  const multas=state.multas||[];
+  const hoje=getTodayLocal();
 
-  const fmtDia=d=>new Date(d+'T12:00:00').toLocaleDateString('pt-BR');
+  const fmtDia=str=>str?parseLocalDate(str).toLocaleDateString('pt-BR'):'—';
   const diasStr=n=>n>=14?`há ${Math.round(n/7)} semanas`:`há ${n} dia${n!==1?'s':''}`;
 
-  motoristas.forEach(m=>{
-    const risk=calcDriverRisk(m);
+  // Retorna a data mais recente entre registros administrativos do veículo
+  function ultimaMovimentacaoVeiculo(carroId){
+    const datas=[];
+    // Pagamentos
+    pagamentos.filter(p=>p.carro_id===carroId&&p.data)
+      .forEach(p=>datas.push(p.data));
+    // Manutenções
+    manutencoes.filter(m=>m.carro_id===carroId&&m.data)
+      .forEach(m=>datas.push(m.data));
+    // Multas
+    multas.filter(m=>m.carro_id===carroId&&m.data)
+      .forEach(m=>datas.push(m.data));
+    if(!datas.length)return null;
+    // Retorna a mais recente (string YYYY-MM-DD — ordenação direta)
+    return datas.sort((a,b)=>a<b?1:-1)[0];
+  }
 
-    // Inatividade — com data do último lançamento
-    if(risk.diasSemAtividade>=2){
-      const ultimaJ=jornadas
-        .filter(j=>j.motorista_id===m.id&&safeNum(j.bruto)>0)
-        .sort((a,b)=>new Date(b.data)-new Date(a.data))[0];
-      const desde=ultimaJ?` (desde ${fmtDia(ultimaJ.data)})`:'';
-      const tipo=risk.diasSemAtividade>3?'red':'yellow';
-      alertas.push({tipo,msg:`⚠️ ${m.nome} sem atividade ${diasStr(risk.diasSemAtividade)}${desde}.`,acao:null});
+  // Retorna a data mais recente de pagamentos do veículo (para tendência)
+  function pagamentosNoPeriodo(carroId,iniStr,fimStr){
+    return pagamentos.filter(p=>{
+      if(p.carro_id!==carroId||!p.data)return false;
+      return daysBetween(iniStr,p.data)>=0&&daysBetween(p.data,fimStr)>=0;
+    });
+  }
+
+  motoristas.forEach(m=>{
+    const carro=carros.find(c=>c.motorista_id===m.id);
+    if(!carro)return;
+
+    // Inatividade — baseada na última movimentação administrativa do veículo
+    const ultimaMov=ultimaMovimentacaoVeiculo(carro.id);
+    const diasSemMov=ultimaMov?daysBetween(ultimaMov,hoje):null;
+
+    if(diasSemMov!==null&&diasSemMov>=7){
+      const desde=` (desde ${fmtDia(ultimaMov)})`;
+      const tipo=diasSemMov>14?'red':'yellow';
+      alertas.push({tipo,msg:`⚠️ ${m.nome} sem lançamentos recentes ${diasStr(diasSemMov)}${desde}.`,acao:null});
     }
 
-    // Queda de receita — com período de referência
-    if(risk.tendenciaReceita<-20){
-      const refIni=new Date(hoje);refIni.setDate(hoje.getDate()-14);
-      const desde=` (desde ${refIni.toLocaleDateString('pt-BR')})`;
-      alertas.push({tipo:'red',msg:`📉 ${m.nome} com queda de ${Math.abs(risk.tendenciaReceita).toFixed(0)}% na receita ${diasStr(14)}${desde}.`,acao:null});
-    } else if(risk.tendenciaReceita<-10){
-      alertas.push({tipo:'yellow',msg:`📉 ${m.nome} com queda de ${Math.abs(risk.tendenciaReceita).toFixed(0)}% na receita vs semana anterior.`,acao:null});
+    // Tendência de pagamentos — queda vs período anterior
+    const ini7=subtractDays(hoje,7);
+    const ini14=subtractDays(hoje,14);
+    const pags7=pagamentosNoPeriodo(carro.id,ini7,hoje)
+      .reduce((a,p)=>a+safeNum(p.valor),0);
+    const pags7ant=pagamentosNoPeriodo(carro.id,ini14,ini7)
+      .reduce((a,p)=>a+safeNum(p.valor),0);
+    const queda=safeDivide(pags7-pags7ant,pags7ant||1)*100;
+
+    if(pags7ant>0&&queda<-30){
+      alertas.push({tipo:'red',msg:`📉 ${m.nome} com queda de ${Math.abs(queda).toFixed(0)}% nos recebimentos vs semana anterior.`,acao:null});
     }
   });
 
@@ -1565,26 +1586,24 @@ function calcAlertasInteligentes(){
     const health=calcCarHealth(c);
     const mot=motoristas.find(m=>m.id===c.motorista_id);
 
-    // ROI negativo — com período desde primeiro pagamento
+    // ROI negativo
     if(health.roi<0){
       const primPag=pagamentos
-        .filter(p=>p.carro_id===c.id)
-        .sort((a,b)=>new Date(a.data)-new Date(b.data))[0];
+        .filter(p=>p.carro_id===c.id&&p.data)
+        .sort((a,b)=>a.data<b.data?-1:1)[0];
       const desde=primPag?` (desde ${fmtDia(primPag.data)})`:'';
       alertas.push({tipo:'red',msg:`🚗 ${c.modelo} ${c.placa} com ROI negativo${desde}.`,acao:null});
     }
 
-    // Carro parado — com data da última atividade
-    if(health.ocioso&&c.motorista_id&&mot){
-      const ultimaJ=jornadas
-        .filter(j=>j.motorista_id===mot.id&&safeNum(j.bruto)>0)
-        .sort((a,b)=>new Date(b.data)-new Date(a.data))[0];
-      const diasParado=ultimaJ
-        ?Math.floor((hoje-new Date(ultimaJ.data+'T12:00:00'))/(1000*60*60*24))
-        :30;
-      const desde=ultimaJ?` (desde ${fmtDia(ultimaJ.data)})`:'';
-      const tipo=diasParado>3?'red':'yellow';
-      alertas.push({tipo,msg:`😴 ${c.modelo} ${c.placa} parado ${diasStr(diasParado)}${desde}.`,acao:null});
+    // Carro sem movimentação administrativa recente
+    if(c.motorista_id&&mot){
+      const ultimaMov=ultimaMovimentacaoVeiculo(c.id);
+      const diasParado=ultimaMov?daysBetween(ultimaMov,hoje):null;
+      if(diasParado!==null&&diasParado>14){
+        const desde=` (desde ${fmtDia(ultimaMov)})`;
+        const tipo=diasParado>21?'red':'yellow';
+        alertas.push({tipo,msg:`😴 ${c.modelo} ${c.placa} sem movimentações administrativas ${diasStr(diasParado)}${desde}.`,acao:null});
+      }
     }
 
     // Sem motorista
@@ -1601,39 +1620,191 @@ function calcInadimplencia(){
   const carros=state.carros||[];
   const pagamentos=state.pagamentos||[];
   const motoristas=state.motoristas||[];
+  const hoje=getTodayLocal(); // ← local, não UTC
 
   return carros.filter(c=>c.motorista_id).map(c=>{
     const mot=motoristas.find(m=>m.id===c.motorista_id);
     const cfg=mot?.config||{};
     const alugSemanal=safeNum(cfg.aluguel_semanal);
 
-    // Semanas desde o início (usa primeiro pagamento como referência)
     const pags=pagamentos.filter(p=>p.carro_id===c.id);
     const totalRecebido=pags.reduce((a,p)=>a+safeNum(p.valor),0);
 
-    // Receita prevista: aluguel * semanas ativas
-    const primeiroFmt=pags.sort((a,b)=>new Date(a.data)-new Date(b.data))[0];
-    const semanas=primeiroFmt?
-      Math.ceil((new Date()-new Date(primeiroFmt.data+'T12:00:00'))/(7*24*60*60*1000)):0;
+    const primPag=pags.sort((a,b)=>daysBetween(b.data,a.data))[0];
+    // Semanas usando daysBetween — timezone-safe
+    const diasDesdeInicio=primPag?daysBetween(primPag.data,hoje):0;
+    const semanas=Math.ceil(safeDivide(diasDesdeInicio,7));
     const previsto=alugSemanal*semanas;
     const deficit=Math.max(0,previsto-totalRecebido);
-    const inadimplente=deficit>alugSemanal; // deve mais de 1 semana
+    const inadimplente=deficit>alugSemanal;
 
     return {
-      carro_id:c.id,
-      modelo:c.modelo,
-      placa:c.placa,
+      carro_id:c.id,modelo:c.modelo,placa:c.placa,
       motorista:mot?.nome||'—',
       previsto:safeNum(previsto),
       recebido:safeNum(totalRecebido),
       deficit:safeNum(deficit),
-      inadimplente,
-      semanas,
+      inadimplente,semanas,
     };
   });
 }
 
-// ── FIRST LOGIN CHECK ─────────────────────────────────────────────────────
+// ══════════════════════════════════════════════════════════════════════════
+// RENT ENGINE — controle de saldo semanal isolado
+// ══════════════════════════════════════════════════════════════════════════
+
+// Gera string YYYY-MM-DD para início da semana (segunda-feira) de uma data
+function getWeekStart(dateStr){
+  const d=parseLocalDate(dateStr);
+  const day=d.getDay(); // 0=dom, 1=seg...
+  const diff=day===0?-6:1-day; // ajusta para segunda
+  d.setDate(d.getDate()+diff);
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+}
+
+// Adiciona N dias a uma string YYYY-MM-DD
+function addDays(dateStr,n){
+  const d=parseLocalDate(dateStr);
+  d.setDate(d.getDate()+n);
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+}
+
+// Gera calendário de semanas desde início até hoje
+// weeklyRent: valor semanal do aluguel
+// startDate: YYYY-MM-DD data de início do vínculo
+function buildWeeklySchedule(weeklyRent, startDate){
+  const hoje=getTodayLocal();
+  const rent=safeNum(weeklyRent);
+  if(!rent||!startDate)return[];
+
+  const semanas=[];
+  let cur=getWeekStart(startDate);
+
+  // Gera até semana atual + 1 futura (para crédito)
+  let safety=0;
+  while(daysBetween(cur,hoje)>=0&&safety<104){ // max 2 anos
+    const end=addDays(cur,6);
+    semanas.push({
+      weekStart:cur,
+      weekEnd:end,
+      amountDue:rent,
+      amountPaid:0,
+      balance:rent,
+      status:'open',
+    });
+    cur=addDays(cur,7);
+    safety++;
+  }
+  return semanas;
+}
+
+// Distribui pagamentos FIFO nas semanas mais antigas primeiro
+// Retorna schedule atualizado com amountPaid, balance e status por semana
+function applyPaymentToRent(schedule, pagamentos){
+  if(!schedule.length||!pagamentos.length)return schedule;
+
+  // Ordena pagamentos por data (mais antigo primeiro — FIFO)
+  const pags=[...pagamentos].sort((a,b)=>a.data<b.data?-1:1);
+
+  // Copia schedule para não mutar o original
+  const result=schedule.map(s=>({...s,amountPaid:0,balance:s.amountDue,status:'open'}));
+
+  // Pool de crédito para excedentes
+  let credito=0;
+
+  pags.forEach(p=>{
+    let restante=safeNum(p.valor)+credito;
+    credito=0;
+
+    for(let i=0;i<result.length;i++){
+      if(restante<=0)break;
+      const semana=result[i];
+      if(semana.status==='paid')continue;
+
+      const falta=semana.amountDue-semana.amountPaid;
+      if(falta<=0){semana.status='paid';continue;}
+
+      if(restante>=falta){
+        semana.amountPaid+=falta;
+        semana.balance=0;
+        semana.status='paid';
+        restante-=falta;
+      } else {
+        semana.amountPaid+=restante;
+        semana.balance=semana.amountDue-semana.amountPaid;
+        semana.status='partial';
+        restante=0;
+      }
+    }
+
+    // Excedente vira crédito
+    if(restante>0)credito+=restante;
+  });
+
+  // Aplica crédito remanescente (se houver)
+  if(credito>0){
+    for(let i=0;i<result.length;i++){
+      if(result[i].status!=='paid'&&result[i].balance>0){
+        const falta=result[i].balance;
+        if(credito>=falta){
+          result[i].amountPaid+=falta;
+          result[i].balance=0;
+          result[i].status='paid';
+          credito-=falta;
+        } else {
+          result[i].amountPaid+=credito;
+          result[i].balance=result[i].amountDue-result[i].amountPaid;
+          result[i].status='partial';
+          credito=0;
+        }
+        break;
+      }
+    }
+  }
+
+  return result;
+}
+
+// Função principal: retorna balanço completo de um veículo
+function calcRentBalance(carroId){
+  const carro=state.carros.find(c=>c.id===carroId);
+  if(!carro||!carro.motorista_id)return null;
+
+  const mot=state.motoristas.find(m=>m.id===carro.motorista_id);
+  if(!mot)return null;
+
+  const cfg=mot.config||{};
+  const weeklyRent=safeNum(cfg.aluguel_semanal);
+  if(!weeklyRent)return null;
+
+  // Data de início = primeiro pagamento ou data de hoje - 4 semanas
+  const pags=(state.pagamentos||[]).filter(p=>p.carro_id===carroId&&p.data);
+  const startDate=pags.length
+    ?pags.sort((a,b)=>a.data<b.data?-1:1)[0].data
+    :subtractDays(getTodayLocal(),28);
+
+  const schedule=buildWeeklySchedule(weeklyRent,startDate);
+  const scheduleComPags=applyPaymentToRent(schedule,pags);
+
+  const totalDue=scheduleComPags.reduce((a,s)=>a+s.amountDue,0);
+  const totalPaid=scheduleComPags.reduce((a,s)=>a+s.amountPaid,0);
+  const totalPending=Math.max(0,totalDue-totalPaid);
+  const semanasAbertas=scheduleComPags.filter(s=>s.status!=='paid');
+  const semanasAtrasadas=semanasAbertas.filter(s=>daysBetween(s.weekEnd,getTodayLocal())>0);
+
+  return {
+    carroId,
+    motorista:mot.nome,
+    weeklyRent,
+    totalDue:safeNum(totalDue),
+    totalPaid:safeNum(totalPaid),
+    totalPending:safeNum(totalPending),
+    semanasTotal:scheduleComPags.length,
+    semanasAbertas:semanasAbertas.length,
+    semanasAtrasadas:semanasAtrasadas.length,
+    schedule:scheduleComPags,
+  };
+}
 function checkFirstLogin(user, onSuccess){
   if(!user.mustChangePassword){ onSuccess(); return; }
 
